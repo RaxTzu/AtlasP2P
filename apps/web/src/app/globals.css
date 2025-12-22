@@ -1,0 +1,618 @@
+@import 'tailwindcss';
+
+/* CSS Variables for theming */
+@theme {
+  /* Brand colors */
+  --color-primary: #ff8c00;
+  --color-secondary: #ffa500;
+  --color-accent: #ffb347;
+
+  /* Base colors (light mode defaults) */
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #737373;
+  --color-border: #e5e5e5;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #171717;
+
+  /* Status colors */
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Chart colors (for tier-based visualizations) */
+  --color-chart-1: #06b6d4; /* Cyan - Diamond tier */
+  --color-chart-2: #8b5cf6; /* Purple - Accent charts */
+  --color-chart-3: #f97316; /* Orange - Bronze tier */
+  --color-chart-4: #10b981; /* Emerald - Success charts */
+  --color-chart-5: #f59e0b; /* Amber - Gold tier (using warning) */
+}
+
+/* Override color variables for dark mode when .dark class is present */
+.dark {
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-muted: #262626;
+  --color-muted-foreground: #a3a3a3;
+  --color-border: #404040;
+  --color-card: #171717;
+  --color-card-foreground: #fafafa;
+}
+
+/* Ensure body background changes with theme */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Base styles */
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+/* Custom thin scrollbar styles - theme-aware */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--color-muted);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-muted-foreground);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-foreground);
+}
+
+/* Hide scrollbar utility - use on map page overlays only */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Enhanced marker cluster styles with modern gradient design (used by MapLibre) */
+.marker-cluster-small {
+  background: radial-gradient(
+    circle,
+    rgba(255, 140, 0, 0.3) 0%,
+    rgba(255, 140, 0, 0.7) 100%
+  );
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  width: 48px !important;
+  height: 48px !important;
+}
+.marker-cluster-small div {
+  background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3);
+}
+
+.marker-cluster-medium {
+  background: radial-gradient(
+    circle,
+    rgba(255, 140, 0, 0.4) 0%,
+    rgba(255, 140, 0, 0.8) 100%
+  );
+  box-shadow: 0 0 25px rgba(255, 140, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+  width: 54px !important;
+  height: 54px !important;
+}
+.marker-cluster-medium div {
+  background: linear-gradient(135deg, #ff8c00 0%, #ff7700 100%);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.3);
+}
+
+.marker-cluster-large {
+  background: radial-gradient(
+    circle,
+    rgba(255, 140, 0, 0.5) 0%,
+    rgba(255, 69, 0, 0.9) 100%
+  );
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.5);
+  animation: pulse-cluster 2s ease-in-out infinite;
+  width: 60px !important;
+  height: 60px !important;
+}
+.marker-cluster-large div {
+  background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%);
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.4);
+}
+
+.marker-cluster {
+  background-clip: padding-box;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform; /* GPU acceleration */
+}
+
+.marker-cluster:hover {
+  transform: scale(1.1) translateZ(0); /* Force GPU layer */
+}
+
+.marker-cluster div {
+  width: 40px;
+  height: 40px;
+  margin-left: 4px;
+  margin-top: 4px;
+  text-align: center;
+  border-radius: 50%;
+  font:
+    700 15px 'Helvetica Neue',
+    Arial,
+    Helvetica,
+    sans-serif;
+  color: white;
+  font-weight: bold;
+  line-height: 40px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Pulse animation for large clusters */
+@keyframes pulse-cluster {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Custom marker styles with glow effect */
+.custom-marker {
+  transition: all 0.2s ease-in-out;
+  will-change: transform; /* GPU acceleration */
+}
+
+.custom-marker:hover {
+  transform: scale(1.15) translateZ(0); /* Force GPU layer */
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Animated tier markers */
+.marker-diamond {
+  animation: diamond-pulse 2s ease-in-out infinite;
+}
+
+.marker-gold {
+  animation: gold-shimmer 3s ease-in-out infinite;
+}
+
+/* Diamond tier pulse animation with cyan glow */
+@keyframes diamond-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 10px rgba(0, 212, 255, 0.8),
+      0 0 20px rgba(0, 212, 255, 0.5),
+      0 0 30px rgba(0, 212, 255, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(0, 212, 255, 1),
+      0 0 40px rgba(0, 212, 255, 0.7),
+      0 0 60px rgba(0, 212, 255, 0.5),
+      0 4px 8px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+  }
+}
+
+/* Gold tier shimmer animation with golden glow */
+@keyframes gold-shimmer {
+  0%, 100% {
+    box-shadow:
+      0 0 15px rgba(255, 215, 0, 0.9),
+      0 0 25px rgba(255, 215, 0, 0.6),
+      0 0 35px rgba(255, 215, 0, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(255, 215, 0, 1),
+      0 0 45px rgba(255, 215, 0, 0.8),
+      0 0 65px rgba(255, 215, 0, 0.5),
+      0 4px 8px rgba(0, 0, 0, 0.4);
+    filter: brightness(1.2);
+  }
+}
+
+/* Sparkle effect for premium tiers */
+.marker-sparkle {
+  position: relative;
+}
+
+.marker-sparkle::before {
+  content: '✨';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 10px;
+  animation: sparkle-rotate 4s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes sparkle-rotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.9;
+  }
+  25% {
+    transform: rotate(90deg) scale(1.2);
+    opacity: 1;
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+    opacity: 0.9;
+  }
+  75% {
+    transform: rotate(270deg) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* Node tier badges */
+.tier-diamond {
+  background: linear-gradient(135deg, #b9f2ff 0%, #00d4ff 100%);
+}
+.tier-gold {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+}
+.tier-silver {
+  background: linear-gradient(135deg, #c0c0c0 0%, #a0a0a0 100%);
+}
+.tier-bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #a0522d 100%);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted-foreground);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground);
+}
+
+/* Config-driven tile filters - applied dynamically from project.config.yaml */
+/* Filters are applied inline via TileLayer className based on tileStyles config */
+
+/* Tile filter base (applied to all themed tiles) */
+.tile-filter {
+  transition: filter 0.3s ease-in-out;
+}
+
+/* Theme toggle icons - ensure proper visibility and smooth transitions */
+.theme-icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .theme-icon-sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0);
+  pointer-events: none;
+}
+
+.theme-icon-moon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .theme-icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+  pointer-events: auto;
+}
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all animations for users who prefer reduced motion */
+  .marker-cluster,
+  .custom-marker,
+  .marker-diamond,
+  .marker-gold,
+  .marker-sparkle,
+  .marker-sparkle::before,
+  .tile-filter {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* MapLibre NavigationControl theme-aware styles */
+.maplibregl-ctrl-bottom-left {
+  bottom: 80px !important; /* Align with map style switcher (bottom-20 = 5rem = 80px) */
+  left: 10px !important; /* Default: left-aligned on mobile/tablet */
+}
+
+/* On desktop (lg:), shift right to avoid Map Style switcher overlap */
+@media (min-width: 1024px) {
+  .maplibregl-ctrl-bottom-left {
+    left: 200px !important;
+  }
+}
+
+.maplibregl-ctrl-group,
+.maplibregl-ctrl-group:not(:empty) {
+  background: color-mix(in srgb, var(--color-card) 85%, transparent) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 0 0 2px var(--color-border) !important;
+  margin: 0 !important;
+}
+
+.maplibregl-ctrl-group button,
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-in,
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-out {
+  background-color: transparent !important;
+  background-image: none !important;
+  width: 29px !important;
+  height: 29px !important;
+  display: block !important;
+  padding: 0 !important;
+  outline: none !important;
+  border: 0 !important;
+  box-sizing: border-box !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: color-mix(in srgb, var(--color-muted) 50%, transparent) !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--color-border) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+/* Zoom button icons - use SVG filter to change color based on theme */
+.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
+.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  filter: invert(0) !important;
+}
+
+.dark .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
+.dark .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  filter: invert(1) !important;
+}
+
+/* Compass icon in navigation control */
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  background-color: transparent !important;
+}
+
+/* Attribution control (if visible) */
+.maplibregl-ctrl-attrib {
+  background-color: var(--color-card) !important;
+  color: var(--color-muted-foreground) !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--color-foreground) !important;
+}
+
+/* Node hover preview popup */
+.node-hover-popup .maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.node-hover-popup .maplibregl-popup-tip {
+  border-top-color: hsl(var(--color-card) / 0.98) !important;
+}
+
+.dark .node-hover-popup .maplibregl-popup-tip {
+  border-top-color: hsl(var(--color-card) / 0.95) !important;
+}
+
+/* Ensure popup is above other map elements */
+.maplibregl-popup {
+  z-index: 1000 !important;
+  will-change: transform;
+}
+
+/* Smooth fade-in animation for hover popup */
+.node-hover-popup {
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modern UI animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Utility classes */
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.4s ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.3s ease-out;
+}
+
+/* Glass morphism utilities */
+.glass {
+  background: color-mix(in srgb, var(--color-card) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.glass-strong {
+  background: color-mix(in srgb, var(--color-card) 95%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+}
+
+/* OTP Verification animations */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}

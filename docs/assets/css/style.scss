@@ -1,0 +1,107 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* Custom styling for AtlasP2P documentation */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.card {
+  background: #f7f9fc;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+  margin-top: 0;
+  color: #155799;
+  font-size: 1.25rem;
+}
+
+.card p {
+  color: #586069;
+  line-height: 1.6;
+}
+
+.btn {
+  display: inline-block;
+  background: #155799;
+  color: white !important;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn:hover {
+  background: #0d3f6b;
+  text-decoration: none;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #1c2128;
+    border-color: #30363d;
+  }
+
+  .card h3 {
+    color: #58a6ff;
+  }
+
+  .card p {
+    color: #8b949e;
+  }
+}
+
+/* Code blocks */
+pre {
+  background: #f6f8fa !important;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+code {
+  background: #f6f8fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+th, td {
+  padding: 0.75rem;
+  border: 1px solid #e1e4e8;
+  text-align: left;
+}
+
+th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+/* Badges */
+img[src*="shield"] {
+  margin: 0.25rem 0.25rem 0.25rem 0;
+}

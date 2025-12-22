@@ -1,0 +1,71 @@
+# ============================================
+# CADDY REVERSE PROXY CONFIGURATION
+# ============================================
+# Single entry point for production deployment.
+# Auto-SSL via Let's Encrypt.
+#
+# Routes:
+#   /*           → Web App (Next.js)
+#   /supabase/*  → Kong API Gateway (Auth, REST, Storage, Realtime)
+# ============================================
+
+{$DOMAIN:localhost} {
+    # Email for Let's Encrypt notifications
+    tls {$ACME_EMAIL:admin@localhost}
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+
+    # ===========================================
+    # SUPABASE API (Kong Gateway)
+    # ===========================================
+    # Strip /supabase prefix and proxy to Kong
+    handle_path /supabase/* {
+        reverse_proxy kong:8000 {
+            # Pass original host for CORS
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # WebSocket support for Realtime
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+        }
+    }
+
+    # ===========================================
+    # WEB APPLICATION (Next.js)
+    # ===========================================
+    handle {
+        reverse_proxy web:4000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}
+
+# ===========================================
+# LOCALHOST DEVELOPMENT (No SSL)
+# ===========================================
+# When DOMAIN=localhost, Caddy uses HTTP only
+:80 {
+    @notlocalhost {
+        not host localhost
+    }
+    redir @notlocalhost https://{host}{uri} permanent
+
+    # Same routing as above for localhost
+    handle_path /supabase/* {
+        reverse_proxy kong:8000
+    }
+
+    handle {
+        reverse_proxy web:4000
+    }
+}

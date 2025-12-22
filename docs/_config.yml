@@ -1,0 +1,46 @@
+# GitHub Pages Configuration
+title: AtlasP2P Documentation
+description: Professional P2P network visualization platform for cryptocurrency blockchains
+theme: jekyll-theme-cayman
+repository: RaxTzu/AtlasP2P
+
+# Navigation
+navbar_links:
+  Home: /
+  Forking Guide: /FORKING
+  Configuration: /config/CONFIGURATION
+  API Reference: /api/API_REFERENCE
+  Deployment: /PRODUCTION_DEPLOYMENT
+  Developer Guide: /DEVELOPER
+  Architecture: /ARCHITECTURE
+
+# SEO
+lang: en-US
+author: RaxTzu Team
+logo: /assets/atlasp2p.jpg
+
+# GitHub
+github:
+  repository_url: https://github.com/RaxTzu/AtlasP2P
+  is_project_page: true
+
+# Markdown
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+# Exclude from processing
+exclude:
+  - node_modules
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - CLAUDE.md

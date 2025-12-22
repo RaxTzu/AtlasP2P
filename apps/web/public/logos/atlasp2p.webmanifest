@@ -1,0 +1,16 @@
+{
+  "name": "AtlasP2P",
+  "short_name": "AtlasP2P",
+  "icons": [
+    {
+      "src": "/logos/atlasp2p-og.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#155799",
+  "background_color": "#062845",
+  "display": "standalone",
+  "description": "P2P Network Visualization Platform"
+}

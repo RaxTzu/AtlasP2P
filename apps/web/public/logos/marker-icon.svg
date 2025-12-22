@@ -1,0 +1,38 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Generic node marker - simple location pin with server icon -->
+  <defs>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+      <feOffset dx="0" dy="1" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Pin shape -->
+  <path d="M16 4C11.58 4 8 7.58 8 12c0 5.5 8 16 8 16s8-10.5 8-16c0-4.42-3.58-8-8-8z"
+        fill="#155799"
+        stroke="#0d3f6b"
+        stroke-width="1.5"
+        filter="url(#shadow)"/>
+
+  <!-- Inner circle (white background for icon) -->
+  <circle cx="16" cy="12" r="5" fill="white" opacity="0.95"/>
+
+  <!-- Server/node icon inside -->
+  <g transform="translate(16, 12)">
+    <!-- Server stack -->
+    <rect x="-3" y="-4" width="6" height="2" rx="0.5" fill="#155799"/>
+    <rect x="-3" y="-1.5" width="6" height="2" rx="0.5" fill="#155799"/>
+    <rect x="-3" y="1" width="6" height="2" rx="0.5" fill="#155799"/>
+    <!-- Connection dots -->
+    <circle cx="-2" cy="-3" r="0.5" fill="#00d4ff"/>
+    <circle cx="-2" cy="-0.5" r="0.5" fill="#00d4ff"/>
+    <circle cx="-2" cy="2" r="0.5" fill="#00d4ff"/>
+  </g>
+</svg>

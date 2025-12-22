@@ -1,0 +1,82 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Environment files (only commit .env.example)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# IDE
+.idea
+.vscode
+.claude
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+**/coverage/
+test-results/
+**/test-results/
+playwright-screenshots/
+*.spec.js.map
+.playwright-artifacts-*
+.last-run.json
+.nyc_output/
+
+# Turbo
+.turbo
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.Python
+venv
+.venv
+env
+.env
+*.egg-info
+
+# User Uploads
+apps/web/public/avatars/*
+!apps/web/public/avatars/.gitkeep
+
+# GeoIP databases (download separately)
+data/geoip/*.mmdb
+
+# GeoIP config with credentials (keep template only)
+data/geoip/GeoIP.conf
+!data/geoip/GeoIP.conf.example
+
+# Project config (fork-specific, keep template only)
+config/project.config.yaml
+!config/project.config.yaml.example
+
+# Supabase
+.supabase
+
+# Local binaries
+bin/
+
+# Misc
+*.pem
+.vercel

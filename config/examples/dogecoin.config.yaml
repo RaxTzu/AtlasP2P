@@ -1,0 +1,140 @@
+# ===========================================
+# DOGECOIN NODES MAP - EXAMPLE CONFIG
+# ===========================================
+# This is an example showing how to fork this project for Dogecoin
+
+projectName: Dogecoin Nodes Map
+chain: dogecoin
+
+chainConfig:
+  name: Dogecoin
+  ticker: DOGE
+  p2pPort: 22556
+  rpcPort: 22555
+  protocolVersion: 70015
+  currentVersion: "1.14.9"
+  minimumVersion: "1.14.0"
+  criticalVersion: "1.10.0"
+  explorerUrl: https://dogechain.info
+  websiteUrl: https://dogecoin.com
+  githubUrl: https://github.com/dogecoin/dogecoin
+
+themeConfig:
+  name: Dogecoin Nodes Map
+  primaryColor: "#c2a633"
+  secondaryColor: "#ba9f33"
+  accentColor: "#d4b84a"
+  logo: /logos/dogecoin.png
+  favicon: /logos/dogecoin-favicon.ico
+
+content:
+  siteName: Dogecoin Nodes Map
+  siteDescription: Real-time map and analytics for Dogecoin network nodes worldwide
+  siteUrl: https://nodes.dogecoin.com
+
+  navigation:
+    - name: Map
+      href: /
+      icon: map
+    - name: Statistics
+      href: /stats
+      icon: barchart
+    - name: Leaderboard
+      href: /leaderboard
+      icon: trophy
+
+  footerLinks:
+    - label: API
+      href: /api-docs
+      external: false
+
+  social:
+    - name: GitHub
+      href: https://github.com/dogecoin/dogecoin
+      icon: github
+    - name: Twitter
+      href: https://twitter.com/dogecoin
+      icon: twitter
+    - name: Reddit
+      href: https://reddit.com/r/dogecoin
+      icon: reddit
+
+  copyrightText: Much open source. Very fork.
+  githubRepoUrl: https://github.com/RaxTzu/AtlasP2P
+
+mapConfig:
+  defaultCenter: [20, 0]
+  defaultZoom: 2
+  minZoom: 2
+  maxZoom: 18
+  tileProvider: openstreetmap
+  clusterRadius: 80
+  clusterMaxZoom: 14
+
+  tileStyles:
+    - id: dogecoin
+      name: Dogecoin (Themed)
+      url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+
+    - id: voyager
+      name: Voyager
+      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+
+    - id: dark
+      name: Dark Matter
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+
+  defaultTileStyle: dogecoin
+
+features:
+  map:
+    enabled: true
+    clustering: true
+    heatmap: false
+    liveUpdates: true
+  stats:
+    enabled: true
+    versionChart: true
+    countryChart: true
+    healthScore: true
+  filters:
+    byCountry: true
+    byVersion: true
+    byTier: true
+    byStatus: true
+    search: true
+  nodes:
+    categories: true
+    rankings: true
+    uptimeTracking: true
+    historicalData: true
+  verification:
+    enabled: true
+    messageSign: true
+    userAgent: true
+    portChallenge: false
+    dnsTxt: false
+  tipping:
+    enabled: true
+    tracking: false
+  community:
+    nodeSubmission: false
+    leaderboard: true
+    badges: true
+  ui:
+    darkMode: true
+    themeSwitcher: true
+
+assets:
+  logoPath: /logos/dogecoin.png
+  faviconPath: /logos/dogecoin-favicon.ico
+  ogImagePath: /logos/dogecoin-og.png

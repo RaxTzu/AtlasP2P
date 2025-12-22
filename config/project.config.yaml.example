@@ -1,0 +1,516 @@
+# ===========================================
+# MASTER PROJECT CONFIGURATION
+# ===========================================
+# This is the SINGLE file you need to edit to customize your nodes map!
+#
+# Fork Instructions:
+# 1. Clone this repository
+# 2. Edit this file with your chain's details
+# 3. Add your logos to /apps/web/public/logos/
+# 4. Deploy!
+#
+# See /docs/CONFIGURATION.md for detailed documentation
+
+# ===========================================
+# PROJECT IDENTITY
+# ===========================================
+projectName: AtlasP2P
+chain: template
+
+# ===========================================
+# CHAIN CONFIGURATION
+# ===========================================
+chainConfig:
+  name: YourCoin
+  ticker: YOURCOIN
+  p2pPort: 8333
+  rpcPort: 8332
+  protocolVersion: 70015
+  currentVersion: "1.0.0"
+  minimumVersion: "1.0.0"
+  criticalVersion: "1.0.0"
+  explorerUrl: https://explorer.yourcoin.org
+  websiteUrl: https://yourcoin.org
+  githubUrl: https://github.com/yourcoin
+  releasesUrl: https://github.com/yourcoin/yourcoin/releases
+  latestReleaseUrl: https://github.com/yourcoin/yourcoin/releases/tag/v1.0.0
+
+  # Message signing configuration (for node verification)
+  # messagePrefix: The prefix used by the wallet when signing messages
+  # addressPrefix: Expected address starting character(s)
+  # pubKeyHash: Version byte for P2PKH addresses (hex)
+  messagePrefix: "YourCoin Signed Message:\n"
+  addressPrefix: "Y"
+  pubKeyHash: "00"  # Bitcoin uses 0x00 for addresses starting with '1'
+
+  # DNS seeds for P2P peer discovery
+  dnsSeeds:
+    - seed1.yourcoin.org
+    - seed2.yourcoin.org
+    - seed3.yourcoin.org
+
+  # Known seed nodes (IP:port format) - these are crawled directly
+  # Useful for ensuring specific nodes are always discovered
+  # Add your own nodes or well-known community nodes here
+  seedNodes:
+    - "127.0.0.1:8333"
+
+  # P2P Protocol Configuration (Crawler)
+  # magicBytes: Network magic bytes in hex (4 bytes, e.g., "f9beb4d9" for Bitcoin)
+  # userAgentPatterns: List of regex patterns to match node user agents
+  #   Each pattern should capture the version number as the last group
+  #   Examples: "/Satoshi:([0-9.]+)/" for Bitcoin, "/(YourCoin|Core):([0-9.]+)/" for your coin
+  magicBytes: "f9beb4d9"
+  userAgentPatterns:
+    - "/(YourCoin|Core):([0-9.]+)/"
+
+# ===========================================
+# THEME & BRANDING
+# ===========================================
+themeConfig:
+  name: AtlasP2P
+  primaryColor: "#155799"
+  secondaryColor: "#00d4ff"
+  accentColor: "#58a6ff"
+  logo: /logos/atlasp2p.svg
+  favicon: /logos/atlasp2p-favicon.ico
+
+  # UI semantic colors (used for buttons, badges, states)
+  semanticColors:
+    success: "#22c55e"      # Green - success states, confirmations
+    error: "#ef4444"        # Red - errors, critical actions, ban
+    warning: "#f97316"      # Orange - warnings, demote
+    info: "#3b82f6"         # Blue - informational messages
+    admin: "#a855f7"        # Purple - admin actions, promote
+    danger: "#dc2626"       # Dark red - dangerous actions
+
+  # Node tier colors (used in both 2D map and 3D globe)
+  # Icons: lucide-react icon names (https://lucide.dev/icons)
+  tierColors:
+    diamond:
+      color: "#00d4ff"
+      icon: "gem"  # lucide-react icon name
+      label: "Diamond"
+    gold:
+      color: "#ffd700"
+      icon: "trophy"  # lucide-react icon name
+      label: "Gold"
+    silver:
+      color: "#c0c0c0"
+      icon: "award"  # lucide-react icon name
+      label: "Silver"
+    bronze:
+      color: "#cd7f32"
+      icon: "medal"  # lucide-react icon name
+      label: "Bronze"
+    standard:
+      color: "#ff8c00"  # Uses primaryColor for branding
+      icon: "map-pin"  # lucide-react icon name
+      label: "Standard"
+
+  # Offline node color (gray for all tiers when offline)
+  offlineColor: "#94a3b8"
+
+  # Marker category metadata (icons, sizes, descriptions)
+  markerCategories:
+    diamond:
+      name: "Diamond Node"
+      description: "Top performer: 99.9%+ uptime, current version, 90+ days, tips enabled"
+      icon: "/icons/diamond.png"
+      iconSize: [44, 44]
+      priority: 1
+    gold:
+      name: "Gold Node"
+      description: "Excellent: 99%+ uptime, current version, 60+ days"
+      icon: "/icons/gold.png"
+      iconSize: [40, 40]
+      priority: 2
+    silver:
+      name: "Silver Node"
+      description: "Good: 95%+ uptime, verified, 30+ days"
+      icon: "/icons/silver.png"
+      iconSize: [36, 36]
+      priority: 3
+    bronze:
+      name: "Bronze Node"
+      description: "Verified node"
+      icon: "/icons/bronze.png"
+      iconSize: [32, 32]
+      priority: 4
+    standard:
+      name: "Standard Node"
+      description: "Regular network participant"
+      icon: "/icons/standard.png"
+      iconSize: [28, 28]
+      priority: 5
+    outdated:
+      name: "Outdated Node"
+      description: "Running older version"
+      icon: "/icons/outdated.png"
+      iconSize: [28, 28]
+      priority: 6
+    critical:
+      name: "Critical Node"
+      description: "Very old version, should upgrade"
+      icon: "/icons/critical.png"
+      iconSize: [28, 28]
+      priority: 7
+
+# ===========================================
+# CONTENT CONFIGURATION
+# ===========================================
+content:
+  siteName: YourCoin Nodes Map
+  siteDescription: Real-time map and analytics for YourCoin network nodes worldwide
+  siteUrl: https://nodes.yourcoin.org
+
+  # Navigation menu items
+  navigation:
+    - name: Map
+      href: /
+      icon: map
+    - name: Nodes
+      href: /nodes
+      icon: server
+    - name: Leaderboard
+      href: /leaderboard
+      icon: trophy
+    - name: Dashboard
+      href: /dashboard
+      icon: layout-dashboard
+    - name: API Docs
+      href: /api-docs
+      icon: docs
+
+  # Footer links (middle section)
+  footerLinks:
+    - label: API
+      href: /api-docs
+      external: false
+
+  # Social media links
+  social:
+    - name: GitHub
+      href: https://github.com/yourcoin
+      icon: github
+    - name: Twitter(X)
+      href: https://x.com/yourcoin
+      icon: twitter
+    - name: Discord
+      href: https://discord.gg/yourcoin
+      icon: discord
+
+  # Footer text customization
+  copyrightText: Created by YourCoin Community.
+  githubRepoUrl: https://github.com/RaxTzu/AtlasP2P
+
+# ===========================================
+# MAP CONFIGURATION
+# ===========================================
+mapConfig:
+  defaultCenter: [20, 0]
+  defaultZoom: 2
+  minZoom: 2
+  maxZoom: 18
+  tileProvider: openstreetmap
+  clusterRadius: 80
+  clusterMaxZoom: 14
+
+  # Custom tile styles for your map (3-4 themes recommended)
+  # Each tile style can have the following fields:
+  # REQUIRED:
+  #   - id: Unique identifier (lowercase, no spaces)
+  #   - name: Display name shown in switcher
+  #   - attribution: Copyright/attribution HTML (required for legal compliance)
+  # URL OPTIONS (pick one):
+  #   - url: Raster tile URL pattern (e.g., CARTO, OSM)
+  #   - styleUrl: Vector tile style URL (e.g., Mapbox GL styles)
+  # OPTIONAL:
+  #   - description: Tooltip/help text for users
+  #   - icon: Lucide icon name (https://lucide.dev)
+  #   - urlDark: Alternative URL for dark mode (auto-switches based on theme)
+  #   - filterDark: Alternative CSS filter for dark mode
+  #   - maxZoom: Maximum zoom level (1-22, default: 20)
+  #   - subdomains: Tile server subdomains for load balancing (e.g., [a, b, c, d])
+  #   - filter: CSS filter for color adjustments (e.g., "brightness(1.2) contrast(1.1)")
+  #   - accessibility: Accessibility level - low | medium | high | aaa
+  tileStyles:
+    - id: branded
+      name: Branded
+      description: Custom branded map style (edit filter for your brand colors!)
+      icon: sun  # lucide-react icon name
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+      # Example: Warm colors - adjust hue-rotate, saturation, brightness for your brand
+      filter: "sepia(1) saturate(3) hue-rotate(0deg) brightness(1.6) contrast(1.1)"
+      accessibility: high
+
+    - id: voyager
+      name: Voyager
+      description: Detailed map with crisp roads and labels (light map)
+      icon: map  # lucide-react icon name
+      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+      # Optimized for light detailed map
+      filter: "saturate(1.25) contrast(1.15) brightness(0.85) hue-rotate(1deg)"
+      accessibility: high
+
+    - id: dark
+      name: Dark Matter
+      description: Sleek dark theme perfect for night viewing (dark map)
+      icon: moon  # lucide-react icon name
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
+      maxZoom: 20
+      subdomains: [a, b, c, d]
+      # Optimized for dark map - enhanced visibility
+      filter: "brightness(1.12) contrast(1.25) saturate(1.15) hue-rotate(2deg)"
+      accessibility: medium
+
+  defaultTileStyle: branded
+
+# ===========================================
+# CRAWLER CONFIGURATION
+# ===========================================
+crawlerConfig:
+  # How long to wait before marking a node for deletion (in hours)
+  # Nodes that have been offline longer than this will be pruned
+  pruneAfterHours: 168  # 7 days
+
+  # Crawler scan interval in minutes
+  scanIntervalMinutes: 5
+
+  # Maximum concurrent connections during crawl
+  maxConcurrentConnections: 100
+
+  # Connection timeout in seconds
+  connectionTimeoutSeconds: 10
+
+  # Extended timeout for "reachable" nodes (TCP connected but handshake failed)
+  # Give slow/busy nodes more time on retry
+  extendedTimeoutSeconds: 30
+
+  # Maximum retries for failed connections
+  maxRetries: 3
+
+  # Retry delay configuration (exponential backoff)
+  # Formula: initialRetryDelaySeconds * (retryBackoffMultiplier ^ attempt)
+  # Example: 1s, 2s, 4s for multiplier=2
+  initialRetryDelaySeconds: 1
+  retryBackoffMultiplier: 2
+
+  # Protocol version negotiation
+  # Try multiple protocol versions on handshake failure
+  # Primary version comes from chainConfig.protocolVersion (70144 for v1.18.0)
+  # These are fallback versions for older/newer nodes
+  fallbackProtocolVersions:
+    - 70142  # v1.16.0.6 (Jul 2022)
+    - 70127  # v1.16.0.5 - Chain ID switch (Apr 2022)
+    - 70126  # Minimum peer protocol version
+    # Older versions below 70126 will be rejected by current nodes
+
+  # Save only nodes with version data
+  # If true, nodes without version info won't be saved to database
+  # This keeps your database clean and focused on useful nodes
+  requireVersionForSave: true
+
+# ===========================================
+# ADMIN & NOTIFICATIONS
+# ===========================================
+adminConfig:
+  # Admin emails for alerts and notifications (array)
+  # Multiple admins can receive system alerts
+  adminEmails:
+    - admin@example.com
+    - devops@example.com
+
+  # Semantic Colors
+  # These colors map to UI states (success, warning, error, info)
+  # Used consistently across the application for status indicators
+  semanticColors:
+    success: "#22c55e"  # Green - successful operations, online nodes
+    warning: "#f59e0b"  # Amber - warnings, outdated versions
+    error: "#ef4444"    # Red - errors, offline nodes, critical alerts
+    info: "#3b82f6"     # Blue - informational messages, tips
+
+  # Email Configuration
+  # IMPORTANT: SMTP credentials and API keys go in .env (secrets)
+  # Only configuration settings belong here
+  email:
+    # Email service provider: 'resend', 'sendgrid', 'smtp', or 'disabled'
+    provider: resend
+
+    # Sender information (displayed in emails)
+    fromEmail: noreply@example.com
+    fromName: Node Map
+
+    # Optional: Alerts sender (defaults to fromEmail/fromName if not set)
+    # Use different sender for system alerts vs user emails
+    alertsFromEmail: alerts@example.com
+    alertsFromName: Node Map Alerts
+
+    # Email verification settings
+    # autoConfirm: Skip email verification (useful for local development)
+    # verificationRequired: Require email verification for new accounts
+    autoConfirm: false
+    verificationRequired: true
+
+    # OTP (One-Time Password) settings for email verification
+    otp:
+      # OTP expiration time in minutes
+      expiryMinutes: 10
+      # Maximum OTP resend attempts
+      maxResendAttempts: 3
+      # Cooldown between resends in seconds
+      resendCooldownSeconds: 60
+
+  # Alert thresholds
+  alerts:
+    enabled: false
+    # Alert if total nodes drops below this percentage
+    nodeCountDropPercent: 20
+    # Alert if network health score drops below this
+    healthScoreThreshold: 70
+    # Minimum time between alerts (hours)
+    alertCooldownHours: 24
+
+# ===========================================
+# FEATURE FLAGS
+# ===========================================
+features:
+  map:
+    enabled: true
+    clustering: true
+    heatmap: true
+    liveUpdates: true
+
+  stats:
+    enabled: true
+    versionChart: true
+    countryChart: true
+    healthScore: true
+
+  filters:
+    byCountry: true
+    byVersion: true
+    byTier: true
+    byStatus: true
+    search: true
+
+  nodes:
+    categories: true
+    rankings: true
+    uptimeTracking: true
+    historicalData: true
+
+  verification:
+    enabled: true
+    # Available verification methods
+    methods:
+      messageSign: true
+      userAgent: false
+      portChallenge: false
+      dnsTxt: true
+    # Payment requirement (anti-spam)
+    requirePayment: false
+    paymentAmount: 100
+    paymentCurrency: DINGO
+    # Challenge settings
+    challengeExpiryHours: 24
+    autoApprove: false
+
+  tipping:
+    enabled: true
+    tracking: false
+    # Accepted cryptocurrencies for tipping (ticker symbols)
+    acceptedCoins:
+      - DINGO
+      - BTC
+      - LTC
+      - DOGE
+      - ETH
+
+  community:
+    nodeSubmission: true
+    leaderboard: true
+    badges: true
+
+  ui:
+    darkMode: true
+    themeSwitcher: true
+
+  turnstile:
+    enabled: true
+    # Site key (public key) - safe to commit
+    siteKey: "0x4AAAAAACHmrULrWXGjnBlP"
+    # IMPORTANT: Secret key goes in .env as TURNSTILE_SECRET_KEY (never commit!)
+    # Turnstile widget mode
+    mode: invisible  # visible | invisible | managed
+    # Actions that require Turnstile verification
+    protectedActions:
+      - verification
+      - tipping
+      - profile_update
+      - contact
+
+  # System limits and restrictions
+  limits:
+    rateLimiting: true
+    requestsPerMinute: 60
+    maxNodesPerUser: 10
+    maxAvatarSizeMB: 2
+    allowedAvatarFormats:
+      - jpg
+      - png
+      - webp
+    minTipAmount: 1
+    maxTipAmount: 1000000
+
+  # Analytics tracking
+  analytics:
+    enabled: false
+    provider: null  # plausible | google | matomo | fathom
+    domain: null
+
+  # Error tracking (Sentry, etc.)
+  errorTracking:
+    enabled: false
+    # DSN goes in .env as SENTRY_DSN
+
+  # Performance monitoring
+  performance:
+    enabled: false
+    showMetrics: false  # Show performance metrics in UI (debug mode)
+
+  # Data export functionality
+  dataExport:
+    enabled: true
+    formats:
+      - json
+      - csv
+
+  # Real-time updates
+  realtime:
+    enabled: true
+    updateIntervalSeconds: 30
+
+  # Public API access
+  api:
+    publicAPI: true
+    apiKeys: false
+
+  # Debug mode (auto-enabled in development)
+  debug:
+    enabled: false
+
+# ===========================================
+# ASSET PATHS
+# ===========================================
+assets:
+  logoPath: /logos/atlasp2p.svg
+  faviconPath: /logos/atlasp2p-favicon.ico
+  ogImagePath: /logos/atlasp2p-og.png

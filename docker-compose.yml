@@ -1,0 +1,195 @@
+# ============================================
+# ATLASP2P - BASE CONFIGURATION
+# ============================================
+# Base services shared between dev and prod.
+# Use with docker-compose.dev.yml or docker-compose.prod.yml
+#
+# Development:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Production:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Or use Makefile:
+#   make dev    # Development mode
+#   make prod   # Production mode
+# ============================================
+
+services:
+  # ===========================================
+  # DATABASE
+  # ===========================================
+  db:
+    image: supabase/postgres:15.8.1.085
+    container_name: atlasp2p-db
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PORT: 5432
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
+
+  # ===========================================
+  # SUPABASE SERVICES (Internal Only)
+  # ===========================================
+  meta:
+    image: supabase/postgres-meta:v0.84.2
+    container_name: atlasp2p-meta
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: atlasp2p-rest
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: public,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  auth:
+    image: supabase/gotrue:v2.164.0
+    container_name: atlasp2p-auth
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:4020}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:4000}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-http://localhost:4000}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
+      GOTRUE_MAILER_EXTERNAL_HOSTS: ${GOTRUE_MAILER_EXTERNAL_HOSTS:-localhost,kong}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-inbucket}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-2500}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@localhost}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-AtlasP2P}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================
+  # API GATEWAY (Kong)
+  # ===========================================
+  # WARNING: Kong needs to be accessible from the host for browser authentication!
+  # Port 4020:8000 is exposed in docker-compose.dev.yml
+  # Always use: make docker-dev OR docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+  kong:
+    image: kong:2.8.1
+    container_name: atlasp2p-kong
+    user: kong
+    expose:
+      - "8000"  # Internal port (published as 4020 in dev mode)
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: bundled
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    volumes:
+      - ./docker/kong.yml:/home/kong/kong.yml:ro
+    depends_on:
+      - rest
+      - auth
+    restart: unless-stopped
+
+  # ===========================================
+  # WEB APPLICATION
+  # ===========================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: ${WEB_TARGET:-development}
+    container_name: atlasp2p-web
+    env_file:
+      - .env
+    environment:
+      # Docker-specific overrides
+      - SUPABASE_INTERNAL_URL=http://kong:8000
+    volumes:
+      # Persist user avatars (for self-hosted deployments)
+      # If using Supabase Cloud Storage, this volume is not used
+      - avatar-storage:/app/public/avatars
+      # Persist Next.js build cache for faster rebuilds
+      - web-next-cache:/app/apps/web/.next/cache
+    depends_on:
+      - kong
+    restart: unless-stopped
+
+  # ===========================================
+  # CRAWLER SERVICE
+  # ===========================================
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawler
+    container_name: atlasp2p-crawler
+    env_file:
+      - .env
+    environment:
+      # Docker-specific overrides
+      - SUPABASE_URL=http://kong:8000
+      - GEOIP_DB_PATH=/app/data/geoip
+    volumes:
+      # Persist GeoIP databases
+      - geoip-data:/app/data/geoip
+
+      # Optional: Mount config for hot-reload (dev only)
+      # - ./config:/app/config:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      kong:
+        condition: service_started
+    restart: unless-stopped
+    # Healthcheck: Ensure crawler is running
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  db-data:
+  avatar-storage:
+  web-next-cache:
+  geoip-data:
+
+networks:
+  default:
+    name: atlasp2p-network

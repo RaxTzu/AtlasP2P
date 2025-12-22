@@ -1,0 +1,85 @@
+# ============================================
+# ATLASP2P - CLOUD SUPABASE MODE
+# ============================================
+# Use with Supabase Cloud (managed database)
+# Only runs web app + crawler
+# All DB/Auth/Storage handled by Supabase Cloud
+#
+# Usage:
+#   docker compose -f docker-compose.cloud.yml up -d
+#
+# Or use Makefile:
+#   make cloud-dev    # Development with cloud DB
+# ============================================
+
+services:
+  # ===========================================
+  # WEB APPLICATION
+  # ===========================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: development
+    container_name: atlasp2p-web-cloud
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env.local
+    environment:
+      # Cloud-specific override (both URLs point to same cloud instance)
+      - SUPABASE_INTERNAL_URL=${NEXT_PUBLIC_SUPABASE_URL}
+    volumes:
+      # Avatar fallback storage (if Supabase Storage not configured)
+      - avatar-storage:/app/public/avatars
+
+      # Build cache
+      - web-next-cache:/app/apps/web/.next/cache
+
+      # Hot reload for development
+      - ./apps/web/src:/app/apps/web/src:ro
+      - ./packages:/app/packages:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================
+  # CRAWLER SERVICE
+  # ===========================================
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawler
+    container_name: atlasp2p-crawler-cloud
+    env_file:
+      - .env.local
+    environment:
+      # Cloud-specific overrides
+      - SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - GEOIP_DB_PATH=/app/data/geoip
+    volumes:
+      # Persist GeoIP databases
+      - geoip-data:/app/data/geoip
+
+      # Hot reload for development (optional)
+      # - ./apps/crawler/src:/app/src:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  avatar-storage:
+  web-next-cache:
+  geoip-data:
+
+networks:
+  default:
+    name: atlasp2p-cloud-network

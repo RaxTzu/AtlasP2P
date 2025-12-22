@@ -1,0 +1,79 @@
+# ============================================
+# DEVELOPMENT OVERRIDES
+# ============================================
+# Exposes ports for local development and debugging.
+# Includes dev-only services (Studio, Inbucket).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   make dev
+#
+# Exposed Ports:
+#   4000 - Web App (Next.js dev server)
+#   4020 - Kong API Gateway (Supabase API)
+#   4021 - PostgreSQL (direct access)
+#   4022 - Supabase Studio (DB admin UI)
+#   4023 - Inbucket Web (email testing)
+#   4024 - Inbucket SMTP
+# ============================================
+
+services:
+  # Expose database for direct access
+  db:
+    ports:
+      - "4021:5432"
+
+  # Expose Kong for browser Supabase calls
+  kong:
+    ports:
+      - "4020:8000"
+
+  # Web app with hot reload
+  web:
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - ./config:/app/config
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - web-next-cache:/app/apps/web/.next
+    environment:
+      - NODE_ENV=development
+      - WEB_TARGET=development
+
+  # ===========================================
+  # DEV-ONLY SERVICES
+  # ===========================================
+
+  # Supabase Studio - Database admin UI
+  studio:
+    image: supabase/studio:20241202-71e5240
+    container_name: atlasp2p-studio
+    ports:
+      - "4022:3000"
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DEFAULT_ORGANIZATION_NAME: ${DEFAULT_ORGANIZATION_NAME:-AtlasP2P}
+      DEFAULT_PROJECT_NAME: ${DEFAULT_PROJECT_NAME:-AtlasP2P}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:4020
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    depends_on:
+      - meta
+    restart: unless-stopped
+
+  # Inbucket - Email testing (catches all outgoing emails)
+  inbucket:
+    image: inbucket/inbucket:3.0.3
+    container_name: atlasp2p-inbucket
+    ports:
+      - "4023:9000"  # Web UI
+      - "4024:2500"  # SMTP
+    restart: unless-stopped
+
+  # Crawler - now defined in base docker-compose.yml
+  # No dev-specific overrides needed

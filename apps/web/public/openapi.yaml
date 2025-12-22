@@ -1,0 +1,584 @@
+openapi: 3.0.3
+info:
+  title: Dingocoin Nodes Map API
+  description: |
+    API for the Dingocoin Nodes Map - A professional P2P network visualization platform.
+
+    ## Authentication
+
+    Most public endpoints support optional API key authentication for higher rate limits.
+    Include your API key in one of these ways:
+    - `Authorization: Bearer dingo_sk_xxxxx`
+    - `X-API-Key: dingo_sk_xxxxx`
+
+    ## Rate Limits
+
+    - **Anonymous requests**: 60 requests per minute (3,600/hour)
+    - **API key requests**: 120 requests per minute (7,200/hour, configurable per key)
+
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Limit`: Maximum requests allowed
+    - `X-RateLimit-Remaining`: Requests remaining in window
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+  version: 1.0.0
+  contact:
+    name: Dingocoin Community
+    url: https://dingocoin.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4000/api
+    description: Local development
+  - url: https://nodes.dingocoin.com/api
+    description: Production
+
+tags:
+  - name: Nodes
+    description: Node discovery and information
+  - name: Statistics
+    description: Network statistics and analytics
+  - name: Leaderboard
+    description: Node rankings and performance
+  - name: Profiles
+    description: Node profiles and customization
+  - name: Alerts
+    description: Alert subscriptions and notifications
+  - name: API Keys
+    description: API key management
+
+paths:
+  /nodes:
+    get:
+      tags:
+        - Nodes
+      summary: List all nodes
+      description: Get a paginated list of discovered nodes with filtering options
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Items per page
+        - name: country
+          in: query
+          schema:
+            type: string
+          description: Filter by country code (e.g., US, DE)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [up, down, unknown]
+          description: Filter by node status
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [diamond, gold, silver, bronze, standard]
+          description: Filter by tier
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+          description: Only show verified nodes
+      responses:
+        '200':
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Node'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /nodes/{id}:
+    get:
+      tags:
+        - Nodes
+      summary: Get node details
+      description: Get detailed information about a specific node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Node ID
+      responses:
+        '200':
+          description: Node details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeDetails'
+        '404':
+          description: Node not found
+
+  /stats:
+    get:
+      tags:
+        - Statistics
+      summary: Get network statistics
+      description: Get aggregate network statistics including node counts, version distribution, and geographic distribution
+      responses:
+        '200':
+          description: Network statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkStats'
+
+  /leaderboard:
+    get:
+      tags:
+        - Leaderboard
+      summary: Get node leaderboard
+      description: Get top nodes ranked by PIX score and performance metrics
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [diamond, gold, silver, bronze, standard]
+      responses:
+        '200':
+          description: Leaderboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  /keys:
+    get:
+      tags:
+        - API Keys
+      summary: List your API keys
+      description: Get a list of all your API keys (requires authentication)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - API Keys
+      summary: Create a new API key
+      description: Create a new API key for programmatic access
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: Friendly name for the key
+                description:
+                  type: string
+                  description: Optional description
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                    enum: ['read:nodes', 'read:stats', 'read:leaderboard', 'read:profiles']
+                  default: ['read:nodes', 'read:stats', 'read:leaderboard']
+                rateLimit:
+                  type: integer
+                  minimum: 10
+                  maximum: 10000
+                  default: 1000
+                  description: Requests per hour
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    $ref: '#/components/schemas/ApiKey'
+                  rawKey:
+                    type: string
+                    description: The full API key (only shown once!)
+                  warning:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /keys/{id}:
+    get:
+      tags:
+        - API Keys
+      summary: Get API key details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: API key details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    $ref: '#/components/schemas/ApiKey'
+        '404':
+          description: API key not found
+
+    put:
+      tags:
+        - API Keys
+      summary: Update API key
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                rateLimit:
+                  type: integer
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated API key
+        '404':
+          description: API key not found
+
+    delete:
+      tags:
+        - API Keys
+      summary: Revoke API key
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: permanent
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Permanently delete instead of revoke
+      responses:
+        '200':
+          description: API key revoked/deleted
+
+  /keys/{id}/rotate:
+    post:
+      tags:
+        - API Keys
+      summary: Rotate API key
+      description: Revoke current key and create a new one with the same settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: New API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    $ref: '#/components/schemas/ApiKey'
+                  rawKey:
+                    type: string
+                  warning:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: JWT token from Supabase Auth
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for programmatic access
+
+  schemas:
+    Node:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ip:
+          type: string
+        port:
+          type: integer
+        status:
+          type: string
+          enum: [up, down, unknown]
+        country_code:
+          type: string
+        country_name:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        client_version:
+          type: string
+        tier:
+          type: string
+          enum: [diamond, gold, silver, bronze, standard]
+        is_verified:
+          type: boolean
+        display_name:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    NodeDetails:
+      allOf:
+        - $ref: '#/components/schemas/Node'
+        - type: object
+          properties:
+            protocol_version:
+              type: integer
+            services:
+              type: string
+            start_height:
+              type: integer
+            latency_ms:
+              type: integer
+            uptime_percentage:
+              type: number
+            pix_score:
+              type: number
+            profile:
+              $ref: '#/components/schemas/NodeProfile'
+
+    NodeProfile:
+      type: object
+      properties:
+        display_name:
+          type: string
+        description:
+          type: string
+        avatar_url:
+          type: string
+        website:
+          type: string
+        twitter:
+          type: string
+        discord:
+          type: string
+
+    NetworkStats:
+      type: object
+      properties:
+        total_nodes:
+          type: integer
+        online_nodes:
+          type: integer
+        countries:
+          type: integer
+        version_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+        country_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+        tier_distribution:
+          type: object
+          additionalProperties:
+            type: integer
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        node_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        ip:
+          type: string
+        country_code:
+          type: string
+        tier:
+          type: string
+        pix_score:
+          type: number
+        uptime_percentage:
+          type: number
+        latency_ms:
+          type: integer
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        keyPrefix:
+          type: string
+          description: First characters of the key for identification
+        description:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        rateLimit:
+          type: integer
+        lastUsedAt:
+          type: string
+          format: date-time
+        requestCount:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Authentication required
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Rate limit exceeded. Please try again later.

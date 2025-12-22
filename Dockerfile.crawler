@@ -1,0 +1,37 @@
+# ============================================
+# PYTHON P2P NETWORK CRAWLER
+# ============================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy and install requirements
+COPY apps/crawler/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy crawler source
+COPY apps/crawler/ ./
+
+# Copy config directory (needed for project.config.yaml)
+COPY config/ /app/config/
+
+# Create data directory
+RUN mkdir -p /app/data/geoip
+
+# Run as non-root
+RUN useradd -m -u 1001 crawler && \
+    chown -R crawler:crawler /app
+
+# Make entrypoint executable (after chown)
+RUN chmod +x /app/entrypoint.sh
+
+USER crawler
+
+# Use entrypoint script (handles GeoIP auto-download)
+ENTRYPOINT ["/app/entrypoint.sh"]

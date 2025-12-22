@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+**/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+.next
+.turbo
+dist
+build
+out
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv
+env
+*.egg-info
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Docs
+README.md
+*.md
+docs
+
+# Data
+data/geoip/*.mmdb
+
+# Test
+coverage
+.nyc_output

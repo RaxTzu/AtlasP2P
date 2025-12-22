@@ -1,0 +1,24 @@
+{
+  "name": "@atlasp2p/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./loader.server": "./src/loader.server.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@atlasp2p/types": "workspace:*",
+    "js-yaml": "^4.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "^5.7.2"
+  }
+}
