@@ -2,6 +2,11 @@
 
 This guide explains every configuration option in `/config/project.config.yaml` - the **ONLY file** you need to edit to customize your Nodes Map.
 
+**After editing config:** Configuration is loaded at server startup. Restart the web container to apply changes:
+```bash
+docker restart atlasp2p-web
+```
+
 ## Table of Contents
 
 1. [Project Identity](#project-identity)

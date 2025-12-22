@@ -130,6 +130,14 @@ make dev-logs
    - Frontend: `apps/web/src/`
    - Crawler: `apps/crawler/src/`
    - Database: `supabase/migrations/`
+   - Configuration: `config/project.config.yaml`
+
+   **Config changes require restart:**
+   ```bash
+   # After editing config/project.config.yaml
+   docker restart atlasp2p-web
+   ```
+   Code changes hot-reload automatically. Config is loaded at startup only.
 
 3. **Test your changes:**
    ```bash

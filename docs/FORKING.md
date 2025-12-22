@@ -92,6 +92,9 @@ AtlasP2P upstream gitignores `project.config.yaml` to allow local development. *
 # Validate your config
 make config-check
 
+# Test your changes (if running)
+docker restart atlasp2p-web
+
 # Commit with -f to override gitignore
 git add -f config/project.config.yaml
 git commit -m "Configure for YourCoin"
@@ -428,7 +431,7 @@ themeConfig:
   accentColor: "#ffb347"     # Highlights, badges
 ```
 
-Colors are used throughout the UI automatically. Use your blockchain's brand color.
+Restart web container to see changes: `docker restart atlasp2p-web`
 
 ### Map Tile Styles
 
