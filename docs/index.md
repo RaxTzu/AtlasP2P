@@ -36,7 +36,7 @@ cp your-favicon.ico apps/web/public/logos/favicon.ico
 
 ### 3. Deploy
 ```bash
-NEXT_PUBLIC_CHAIN=yourcoin make prod
+make prod
 ```
 
 ---

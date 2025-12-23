@@ -159,9 +159,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...YOUR_ANON_KEY_HERE
 # ⚠️ KEEP SECRET - Server-side only, never expose to client
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...YOUR_NEW_SERVICE_ROLE_KEY
 
-# Chain configuration
-NEXT_PUBLIC_CHAIN=dingocoin
-
 # GeoIP (optional - get free account at maxmind.com)
 MAXMIND_ACCOUNT_ID=your_account_id
 MAXMIND_LICENSE_KEY=your_license_key

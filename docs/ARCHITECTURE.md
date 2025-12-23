@@ -578,7 +578,6 @@ docker exec -i atlasp2p-db psql -U supabase_admin -d postgres < supabase/migrati
 ### Environment Variables
 
 **Required**:
-- `NEXT_PUBLIC_CHAIN` - Blockchain network
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public anon key
 - `SUPABASE_SERVICE_ROLE_KEY` - Service role key (server-only)

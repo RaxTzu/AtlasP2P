@@ -63,7 +63,6 @@ jobs:
       - name: Build packages
         run: pnpm build
         env:
-          NEXT_PUBLIC_CHAIN: dingocoin
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
 

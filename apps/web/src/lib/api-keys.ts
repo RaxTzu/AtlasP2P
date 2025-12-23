@@ -5,13 +5,17 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/server';
+import { getChainConfig } from '@atlasp2p/config';
 
 // ===========================================
 // CONSTANTS
 // ===========================================
 
-// API key prefix for identification
-const KEY_PREFIX = 'dingo_sk_';
+// API key prefix derived from chain ticker (e.g., "dingo_sk_" for DINGO)
+function getKeyPrefix(): string {
+  const ticker = getChainConfig().ticker.toLowerCase();
+  return `${ticker}_sk_`;
+}
 
 // Key length (excluding prefix)
 const KEY_LENGTH = 32;
@@ -79,7 +83,7 @@ function generateRawKey(): string {
     key += chars[randomValues[i] % chars.length];
   }
 
-  return KEY_PREFIX + key;
+  return getKeyPrefix() + key;
 }
 
 /**
@@ -97,7 +101,8 @@ async function hashKey(rawKey: string): Promise<string> {
  * Get the display prefix from a raw key (for identification)
  */
 function getKeyDisplayPrefix(rawKey: string): string {
-  return rawKey.substring(0, KEY_PREFIX.length + 8); // "dingo_sk_" + first 8 chars
+  const prefix = getKeyPrefix();
+  return rawKey.substring(0, prefix.length + 8); // "{ticker}_sk_" + first 8 chars
 }
 
 // ===========================================
@@ -323,7 +328,8 @@ export async function validateApiKey(
   ipAddress?: string
 ): Promise<ValidateApiKeyResult> {
   // Quick validation
-  if (!rawKey || !rawKey.startsWith(KEY_PREFIX)) {
+  const prefix = getKeyPrefix();
+  if (!rawKey || !rawKey.startsWith(prefix)) {
     return { valid: false, error: 'Invalid API key format' };
   }
 
@@ -377,18 +383,20 @@ export function hasScope(validatedScopes: ApiScope[], requiredScope: ApiScope): 
  * Extract API key from request headers
  */
 export function extractApiKey(headers: Headers): string | null {
+  const prefix = getKeyPrefix();
+
   // Check Authorization header first (Bearer token)
   const authHeader = headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    if (token.startsWith(KEY_PREFIX)) {
+    if (token.startsWith(prefix)) {
       return token;
     }
   }
 
   // Check X-API-Key header
   const apiKeyHeader = headers.get('X-API-Key');
-  if (apiKeyHeader?.startsWith(KEY_PREFIX)) {
+  if (apiKeyHeader?.startsWith(prefix)) {
     return apiKeyHeader;
   }
 

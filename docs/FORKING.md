@@ -92,6 +92,9 @@ AtlasP2P upstream gitignores `project.config.yaml` to allow local development. *
 # Validate your config
 make config-check
 
+# Test your changes (if running)
+docker restart atlasp2p-web
+
 # Commit with -f to override gitignore
 git add -f config/project.config.yaml
 git commit -m "Configure for YourCoin"
@@ -428,7 +431,7 @@ themeConfig:
   accentColor: "#ffb347"     # Highlights, badges
 ```
 
-Colors are used throughout the UI automatically. Use your blockchain's brand color.
+Restart web container to see changes: `docker restart atlasp2p-web`
 
 ### Map Tile Styles
 
@@ -763,15 +766,19 @@ BITCOIN_CONFIG = ChainConfig(
 
 ### Custom Node Tiers
 
-Edit `/packages/config/src/tiers.ts` to customize tier thresholds:
+Node tier thresholds are calculated in the database tier calculation logic. To customize tier colors and icons, edit `/config/project.config.yaml`:
 
-```typescript
-export const TIER_THRESHOLDS = {
-  diamond: { pix: 950, uptime: 99.9, latency: 50 },
-  gold: { pix: 900, uptime: 98, latency: 100 },
-  silver: { pix: 850, uptime: 95, latency: 200 },
-  bronze: { pix: 800, uptime: 90, latency: 500 },
-};
+```yaml
+themeConfig:
+  tierColors:
+    diamond:
+      color: "#00d4ff"
+      icon: "gem"
+      label: "Diamond"
+    gold:
+      color: "#ffd700"
+      icon: "trophy"
+    # ... etc
 ```
 
 ### Custom PIX Score Formula
@@ -796,7 +803,7 @@ export function calculatePIX(
 
 To support multiple chains in one deployment:
 
-1. Set `NEXT_PUBLIC_CHAIN` dynamically (e.g., from subdomain)
+1. Update `config/project.config.yaml` with multi-chain configuration
 2. Run separate crawler instances for each chain
 3. Use chain-specific configs in database
 4. Filter all queries by `chain` column

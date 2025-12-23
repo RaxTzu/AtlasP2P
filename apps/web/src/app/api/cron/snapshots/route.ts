@@ -23,8 +23,6 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  // IMPORTANT: NEXT_PUBLIC_CHAIN should be set in environment
-  // Defaults to 'bitcoin' if not configured (update for your chain!)
   const chain = getChain();
 
   try {
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   const supabase = await createClient();
-  // IMPORTANT: NEXT_PUBLIC_CHAIN should be set in environment
   const chain = getChain();
 
   const { data, error } = await supabase

@@ -32,6 +32,11 @@ import { createClient } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
 
+// Get API key prefix example based on configured chain ticker
+const chainConfig = getChainConfig();
+const API_KEY_PREFIX = `${chainConfig.ticker.toLowerCase()}_sk_`;
+const TICKER = chainConfig.ticker;
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 interface Parameter {
@@ -233,7 +238,7 @@ const endpoints: EndpointDetail[] = [
     {
       "id": "uuid",
       "name": "Production Key",
-      "keyPrefix": "dingo_sk_abc...",
+      "keyPrefix": "${API_KEY_PREFIX}abc...",
       "description": "My production API key",
       "scopes": ["read:nodes", "read:stats"],
       "rateLimit": 1000,
@@ -266,13 +271,13 @@ const endpoints: EndpointDetail[] = [
   "key": {
     "id": "uuid",
     "name": "My API Key",
-    "keyPrefix": "dingo_sk_abc...",
+    "keyPrefix": "${API_KEY_PREFIX}abc...",
     "scopes": ["read:nodes", "read:stats"],
     "rateLimit": 1000,
     "expiresAt": "2025-01-15T00:00:00Z",
     "createdAt": "2024-01-15T00:00:00Z"
   },
-  "rawKey": "dingo_sk_live_abc123...",
+  "rawKey": "${API_KEY_PREFIX}live_abc123...",
   "warning": "Store this key securely. It will not be shown again."
 }`,
   },
@@ -291,7 +296,7 @@ const endpoints: EndpointDetail[] = [
   "key": {
     "id": "uuid",
     "name": "My API Key",
-    "keyPrefix": "dingo_sk_abc...",
+    "keyPrefix": "${API_KEY_PREFIX}abc...",
     "description": "Production key",
     "scopes": ["read:nodes", "read:stats"],
     "rateLimit": 1000,
@@ -326,7 +331,7 @@ const endpoints: EndpointDetail[] = [
   "key": {
     "id": "uuid",
     "name": "Updated Key Name",
-    "keyPrefix": "dingo_sk_abc...",
+    "keyPrefix": "${API_KEY_PREFIX}abc...",
     "scopes": ["read:nodes"],
     "rateLimit": 500,
     "isActive": true,
@@ -399,7 +404,7 @@ const endpoints: EndpointDetail[] = [
   "isPublic": true,
   "tipConfig": {
     "walletAddress": "D...",
-    "acceptedCoins": ["DINGO"],
+    "acceptedCoins": ["${TICKER}"],
     "isActive": true
   }
 }`,

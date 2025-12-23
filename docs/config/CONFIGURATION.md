@@ -2,6 +2,11 @@
 
 This guide explains every configuration option in `/config/project.config.yaml` - the **ONLY file** you need to edit to customize your Nodes Map.
 
+**After editing config:** Configuration is loaded at server startup. Restart the web container to apply changes:
+```bash
+docker restart atlasp2p-web
+```
+
 ## Table of Contents
 
 1. [Project Identity](#project-identity)
@@ -59,7 +64,7 @@ chainConfig:
 
 ### `ticker` (string)
 - **Description**: Cryptocurrency ticker symbol
-- **Used in**: Node labels, statistics, tipping system
+- **Used in**: Node labels, statistics, tipping system, API key prefixes (e.g., `dingo_sk_...`)
 - **Example**: "DINGO", "DOGE", "BTC", "LTC"
 
 ### `p2pPort` (integer)
@@ -106,6 +111,22 @@ chainConfig:
 - **Description**: Source code repository
 - **Used in**: Footer links, developer resources
 - **Example**: "https://github.com/dingocoin/dingocoin"
+
+### `messagePrefix` (string, optional)
+- **Description**: Message signing prefix used by wallet for signature verification
+- **Used in**: Node ownership verification via message signing
+- **Example**: "Dingocoin Signed Message:\n", "Bitcoin Signed Message:\n"
+- **Note**: Must match your wallet's signing prefix exactly. If omitted, defaults to "{chainName} Signed Message:\n"
+
+### `addressPrefix` (string, optional)
+- **Description**: Expected starting character(s) of wallet addresses
+- **Used in**: Address format validation during verification
+- **Example**: "D" (Dingocoin/Dogecoin), "1" (Bitcoin P2PKH), "L" (Litecoin)
+
+### `pubKeyHash` (string, hex, optional)
+- **Description**: Version byte for P2PKH addresses in hexadecimal
+- **Used in**: Cryptographic signature recovery during verification
+- **Example**: "1e" (Dingocoin/Dogecoin = 0x1E = 30), "00" (Bitcoin = 0x00)
 
 ---
 

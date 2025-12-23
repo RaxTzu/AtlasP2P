@@ -46,7 +46,6 @@ make docker-dev
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:4020
 SUPABASE_INTERNAL_URL=http://kong:8000  # Docker internal
-NEXT_PUBLIC_CHAIN=bitcoin
 ```
 
 **Migrations:** Auto-run from `/docker-entrypoint-initdb.d/`
@@ -94,7 +93,6 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_INTERNAL_URL=https://xxxxx.supabase.co  # Same URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-NEXT_PUBLIC_CHAIN=bitcoin
 ```
 
 **Migrations:** `supabase db push` or SQL Editor
@@ -172,7 +170,6 @@ cp .env.docker.example .env
 nano .env
 
 # Required:
-NEXT_PUBLIC_CHAIN=dogecoin
 DOMAIN=nodes.dogecoin.com
 ACME_EMAIL=admin@dogecoin.com
 SMTP_HOST=smtp.sendgrid.net
@@ -241,7 +238,6 @@ cp .env.cloud.example .env
 nano .env
 
 # Required:
-NEXT_PUBLIC_CHAIN=dogecoin
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
@@ -304,7 +300,6 @@ VPS (crawler only)
 vercel deploy
 
 # In Vercel dashboard → Environment Variables:
-NEXT_PUBLIC_CHAIN=dogecoin
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...

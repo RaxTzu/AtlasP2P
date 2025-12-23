@@ -124,12 +124,7 @@ chainConfig:
 - Replace with your coin's branding (PNG or SVG)
 - Update paths in `project.config.yaml`
 
-**3. Set Environment Variable** (`.env`):
-```bash
-NEXT_PUBLIC_CHAIN=yourcoin
-```
-
-**Deploy!**
+**3. Deploy!**
 ```bash
 make prod
 ```

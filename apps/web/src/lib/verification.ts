@@ -1,7 +1,7 @@
-import * as bitcoin from 'bitcoinjs-lib';
 import * as ecc from 'tiny-secp256k1';
 import { ECPairFactory } from 'ecpair';
 import { createHash } from 'crypto';
+import { getChainConfig, getChain } from '@atlasp2p/config';
 
 // Initialize ECPair with secp256k1
 const ECPair = ECPairFactory(ecc);
@@ -27,8 +27,8 @@ export interface NetworkConfig {
   addressPrefix: string;
 }
 
-// Default network configs for supported chains
-const NETWORK_CONFIGS: Record<string, NetworkConfig> = {
+// Fallback network configs for common chains (used when verifying other chains)
+const FALLBACK_NETWORK_CONFIGS: Record<string, NetworkConfig> = {
   bitcoin: {
     messagePrefix: '\x18Bitcoin Signed Message:\n',
     pubKeyHash: 0x00,
@@ -36,11 +36,6 @@ const NETWORK_CONFIGS: Record<string, NetworkConfig> = {
   },
   dogecoin: {
     messagePrefix: '\x19Dogecoin Signed Message:\n',
-    pubKeyHash: 0x1e,
-    addressPrefix: 'D',
-  },
-  dingocoin: {
-    messagePrefix: '\x1aDingocoin Signed Message:\n',
     pubKeyHash: 0x1e,
     addressPrefix: 'D',
   },
@@ -52,14 +47,62 @@ const NETWORK_CONFIGS: Record<string, NetworkConfig> = {
 };
 
 /**
+ * Get network configuration for the current chain from project config
+ */
+function getConfiguredNetworkConfig(): NetworkConfig {
+  const chainConfig = getChainConfig();
+
+  // Build the message prefix with proper length byte
+  // The format is: \x{length}{Chain} Signed Message:\n
+  const rawPrefix = chainConfig.messagePrefix || `${chainConfig.name} Signed Message:\n`;
+
+  // If the config already has the length prefix (starts with \x), use as-is
+  // Otherwise, prepend the length byte
+  let messagePrefix: string;
+  if (rawPrefix.startsWith('\\x') || rawPrefix.charCodeAt(0) < 32) {
+    messagePrefix = rawPrefix;
+  } else {
+    // Add length prefix (Bitcoin-style message signing)
+    const prefixLength = rawPrefix.length;
+    messagePrefix = String.fromCharCode(prefixLength) + rawPrefix;
+  }
+
+  return {
+    messagePrefix,
+    pubKeyHash: chainConfig.pubKeyHash ? parseInt(chainConfig.pubKeyHash, 16) : 0x00,
+    addressPrefix: chainConfig.addressPrefix || '1',
+  };
+}
+
+/**
  * Get network configuration from chain name or custom config
+ * Uses project config for current chain, fallback configs for other chains
  */
 export function getNetworkConfig(chain?: string, customConfig?: Partial<NetworkConfig>): NetworkConfig {
-  const baseConfig = chain ? NETWORK_CONFIGS[chain.toLowerCase()] : NETWORK_CONFIGS.bitcoin;
+  const currentChain = getChain().toLowerCase();
+
+  // If no chain specified or matches current chain, use configured values
+  if (!chain || chain.toLowerCase() === currentChain) {
+    const configuredConfig = getConfiguredNetworkConfig();
+
+    // Apply any custom overrides
+    if (customConfig) {
+      return {
+        messagePrefix: customConfig.messagePrefix || configuredConfig.messagePrefix,
+        pubKeyHash: customConfig.pubKeyHash ?? configuredConfig.pubKeyHash,
+        addressPrefix: customConfig.addressPrefix || configuredConfig.addressPrefix,
+      };
+    }
+
+    return configuredConfig;
+  }
+
+  // For other chains, use fallback configs
+  const baseConfig = FALLBACK_NETWORK_CONFIGS[chain.toLowerCase()];
 
   if (!baseConfig && !customConfig) {
     // Default to Bitcoin-like config
-    return NETWORK_CONFIGS.bitcoin;
+    return FALLBACK_NETWORK_CONFIGS.bitcoin;
   }
 
   return {
@@ -207,8 +250,8 @@ export function verifyMessageSignature(
       };
     }
 
-    // Get network config (defaults to Bitcoin)
-    const config = networkConfig || NETWORK_CONFIGS.bitcoin;
+    // Get network config (defaults to current chain from config)
+    const config = networkConfig || getNetworkConfig();
 
     // Validate address prefix
     if (config.addressPrefix && !address.startsWith(config.addressPrefix)) {

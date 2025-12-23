@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Loader2, Upload, X, Coins, Clock, AlertCircle, CheckCircle } from 'lucide-react';
-import { getThemeConfig, getFeatureFlags } from '@/config';
+import { getThemeConfig, getFeatureFlags, getChainConfig } from '@/config';
 import { useToast } from '@/components/ui/Toast';
 
 // Force dynamic rendering to bypass Next.js 16 pre-rendering bug
@@ -49,8 +49,9 @@ export default function EditProfilePage() {
   const features = getFeatureFlags();
   const { toast } = useToast();
 
-  // Get accepted coins from config (with fallback)
-  const acceptedCoins = features.tipping?.acceptedCoins || ['DINGO', 'BTC', 'LTC', 'DOGE', 'ETH'];
+  // Get accepted coins from config (with fallback using current chain's ticker)
+  const chainTicker = getChainConfig().ticker;
+  const acceptedCoins = features.tipping?.acceptedCoins || [chainTicker, 'BTC', 'LTC', 'DOGE', 'ETH'];
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
