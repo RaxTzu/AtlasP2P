@@ -545,21 +545,50 @@ git commit -m "Add deployment workflow"
 - **Vercel** (commented) - Serverless Next.js hosting
 - **Kubernetes** (commented) - Container orchestration
 
-### Required GitHub Secrets
+### GitHub Secrets Reference
 
-Set these in **Settings → Secrets and variables → Actions**:
+Set secrets in **Settings → Secrets and variables → Actions**:
+
+**CI Workflow - NO SECRETS NEEDED**
+
+The CI workflow uses hardcoded dummy values for build-time environment variables:
+```yaml
+# Build uses these dummy values (not real connections)
+NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
+```
+
+**Deploy Workflow - Secrets Required**
 
 | Secret | Description | Required For |
 |--------|-------------|--------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Build |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | Build |
-| `DEPLOY_HOST` | Server hostname/IP | SSH deployment |
-| `DEPLOY_USER` | SSH username | SSH deployment |
-| `DEPLOY_KEY` | SSH private key | SSH deployment |
-| `DEPLOY_PATH` | Path on server | SSH deployment |
-| `HEALTH_CHECK_URL` | URL for post-deploy check | SSH deployment |
-| `VERCEL_TOKEN` | Vercel API token | Vercel deployment |
-| `KUBE_CONFIG` | Base64-encoded kubeconfig | Kubernetes deployment |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | All deployments |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key | All deployments |
+| `GITHUB_TOKEN` | Auto-provided by GitHub | Docker registry (automatic) |
+
+**SSH Deployment (default):**
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `DEPLOY_HOST` | Server hostname/IP | `nodes.yourcoin.org` |
+| `DEPLOY_USER` | SSH username | `deploy` |
+| `DEPLOY_KEY` | SSH private key (full content) | `-----BEGIN OPENSSH...` |
+| `DEPLOY_PATH` | App path on server | `/opt/atlasp2p` |
+| `HEALTH_CHECK_URL` | URL for post-deploy verification | `https://nodes.yourcoin.org` |
+
+**Vercel Deployment (if using):**
+
+| Secret | Description | Where to Find |
+|--------|-------------|---------------|
+| `VERCEL_TOKEN` | Vercel API token | Vercel Dashboard → Settings → Tokens |
+| `VERCEL_ORG_ID` | Organization/team ID | Vercel Dashboard → Settings → General |
+| `VERCEL_PROJECT_ID` | Project ID | Vercel Project → Settings → General |
+
+**Kubernetes Deployment (if using):**
+
+| Secret | Description |
+|--------|-------------|
+| `KUBE_CONFIG` | Base64-encoded kubeconfig: `cat ~/.kube/config \| base64` |
 
 ### Why This Pattern?
 
