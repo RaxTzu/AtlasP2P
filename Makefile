@@ -18,9 +18,6 @@ COMPOSE_CLOUD := -f docker-compose.cloud.yml
 COMPOSE_PROD_DOCKER := -f docker-compose.yml -f docker-compose.prod.yml
 COMPOSE_PROD_CLOUD := -f docker-compose.cloud.yml -f docker-compose.prod.yml
 
-# Legacy aliases
-COMPOSE_DEV := $(COMPOSE_DOCKER)
-COMPOSE_PROD := $(COMPOSE_PROD_DOCKER)
 
 # ===========================================
 # HELP
@@ -106,8 +103,6 @@ setup-cloud: ## Setup for Cloud Supabase (managed DB)
 	@echo "  3. Run: supabase link && supabase db push"
 	@echo "  4. Run: make cloud-dev"
 
-setup: setup-docker ## Legacy alias for setup-docker
-
 setup-fork: setup-docker ## 🍴 Setup for forking (enables committing config)
 	@echo ""
 	@echo "$(CYAN)🍴 Configuring for fork...$(RESET)"
@@ -131,15 +126,6 @@ setup-fork: setup-docker ## 🍴 Setup for forking (enables committing config)
 	@echo "$(CYAN)Optional: Validate config$(RESET)"
 	@echo "  make config-check"
 	@echo ""
-
-env: ## Create .env from .env.example (legacy)
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		echo "$(GREEN)✓ Created .env$(RESET)"; \
-		echo "$(YELLOW)Edit .env and fill in your values$(RESET)"; \
-	else \
-		echo "$(YELLOW).env already exists$(RESET)"; \
-	fi
 
 # ===========================================
 # DEVELOPMENT MODE
@@ -185,23 +171,17 @@ cloud-dev: ## ☁️  Start CLOUD Supabase mode (web + crawler only)
 	@echo "  $(CYAN)Supabase:$(RESET)     $$(grep NEXT_PUBLIC_SUPABASE_URL .env | cut -d= -f2)"
 	@echo ""
 
-dev: docker-dev ## Legacy alias for docker-dev
-
 docker-down: ## Stop Docker mode
 	@docker compose $(COMPOSE_DOCKER) down
 
 cloud-down: ## Stop Cloud mode
 	@docker compose $(COMPOSE_CLOUD) down
 
-dev-down: docker-down ## Legacy alias
-
 docker-logs: ## Show Docker mode logs
 	@docker compose $(COMPOSE_DOCKER) logs -f
 
 cloud-logs: ## Show Cloud mode logs
 	@docker compose $(COMPOSE_CLOUD) logs -f
-
-dev-logs: docker-logs ## Legacy alias
 
 config-reload: ## 🔄 Reload project.config.yaml (restart web only)
 	@echo "$(CYAN)Reloading configuration...$(RESET)"
@@ -212,8 +192,6 @@ config-reload: ## 🔄 Reload project.config.yaml (restart web only)
 
 config-check: ## ✓ Validate project.config.yaml against schema
 	@pnpm exec node scripts/validate-config.mjs
-
-config-validate: config-check ## Alias for config-check
 
 dev-web: migrate ## Run web app locally (not in Docker)
 	@echo "$(CYAN)Starting web app on port 4000...$(RESET)"
@@ -269,8 +247,6 @@ prod-cloud: ## 🚀 Production - Hybrid (Cloud DB + Docker app)
 	@echo "  $(CYAN)Database:$(RESET) $$(grep NEXT_PUBLIC_SUPABASE_URL .env | cut -d= -f2)"
 	@echo ""
 
-prod: prod-docker ## Legacy alias for prod-docker
-
 prod-down: ## Stop production
 	@docker compose $(COMPOSE_PROD_DOCKER) down 2>/dev/null || true
 	@docker compose $(COMPOSE_PROD_CLOUD) down 2>/dev/null || true
@@ -284,35 +260,23 @@ prod-restart: ## Restart production (recreates containers to reload env vars)
 	@echo "$(GREEN)✓ Production restarted$(RESET)"
 
 # ===========================================
-# DOCKER (Legacy - for backwards compatibility)
+# DOCKER UTILITIES
 # ===========================================
 
-up: ## Start database only (Docker)
-	@echo "$(CYAN)Starting Supabase (base services)...$(RESET)"
-	@docker compose up -d
-	@sleep 5
-	@echo "$(GREEN)✓ Database ready$(RESET)"
-
 down: ## Stop all Docker services
-	@docker compose down
-	@docker compose $(COMPOSE_DEV) down 2>/dev/null || true
-	@docker compose $(COMPOSE_PROD) down 2>/dev/null || true
+	@docker compose $(COMPOSE_DOCKER) down 2>/dev/null || true
+	@docker compose $(COMPOSE_CLOUD) down 2>/dev/null || true
 
 logs: ## Show Docker logs
-	@docker compose logs -f
+	@docker compose $(COMPOSE_DOCKER) logs -f 2>/dev/null || docker compose $(COMPOSE_CLOUD) logs -f
 
-ps: ## Show containers
-	@docker compose ps
-	@docker compose $(COMPOSE_DEV) ps 2>/dev/null || true
+ps: ## Show running containers
+	@docker compose $(COMPOSE_DOCKER) ps 2>/dev/null || docker compose $(COMPOSE_CLOUD) ps
 
-restart: clean-cache down dev ## Restart development environment with clean cache
-
-docker-sync: ## Sync packages to Docker after pnpm add
-	@echo "$(CYAN)Syncing packages to Docker...$(RESET)"
-	@docker exec atlasp2p-web pnpm install
-	@docker compose $(COMPOSE_DOCKER) up -d web
-	@sleep 3
-	@echo "$(GREEN)✓ Docker synced and restarted$(RESET)"
+docker-clean: ## Remove all containers and volumes (WARNING: destroys data!)
+	@docker compose $(COMPOSE_DOCKER) down -v --remove-orphans 2>/dev/null || true
+	@docker compose $(COMPOSE_CLOUD) down -v --remove-orphans 2>/dev/null || true
+	@echo "$(GREEN)✓ Docker cleaned$(RESET)"
 
 # ===========================================
 # DATABASE & MIGRATIONS
@@ -392,12 +356,12 @@ db-restore: ## Restore database (usage: make db-restore FILE=backup.sql)
 
 crawler: ## Start crawler service (Docker)
 	@echo "$(CYAN)Starting crawler service...$(RESET)"
-	@docker compose $(COMPOSE_DEV) up -d crawler
+	@docker compose $(COMPOSE_DOCKER) up -d crawler
 	@echo "$(GREEN)✓ Crawler started$(RESET)"
 	@echo "View logs: $(CYAN)make crawler-logs$(RESET)"
 
 crawler-prod: ## Start crawler in production
-	@docker compose $(COMPOSE_PROD) up -d crawler
+	@docker compose $(COMPOSE_PROD_DOCKER) up -d crawler
 
 crawler-dev: ## Run crawler locally (once)
 	@cd apps/crawler && python -m src.crawler
@@ -454,13 +418,7 @@ clean: ## Clean build artifacts
 	@rm -rf apps/crawler/__pycache__ apps/crawler/*.pyc
 	@echo "$(GREEN)✓ Cleaned$(RESET)"
 
-clean-docker: ## Stop and remove Docker containers/volumes
-	@docker compose $(COMPOSE_DEV) down -v 2>/dev/null || true
-	@docker compose $(COMPOSE_PROD) down -v 2>/dev/null || true
-	@docker compose down -v
-	@echo "$(GREEN)✓ Docker cleaned$(RESET)"
-
-reset: clean clean-docker setup ## Full reset
+reset: clean docker-clean setup-docker ## Full reset (destroys all data!)
 
 # ===========================================
 # UTILITIES

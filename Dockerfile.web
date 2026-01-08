@@ -23,7 +23,7 @@ RUN pnpm install --frozen-lockfile
 
 # Source code mounted via volume
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm install --frozen-lockfile && pnpm --filter @atlasp2p/web dev --port 4000"]
+CMD ["sh", "-c", "pnpm install && pnpm --filter @atlasp2p/web dev --port 4000"]
 
 # ============================================
 # PRODUCTION TARGET
