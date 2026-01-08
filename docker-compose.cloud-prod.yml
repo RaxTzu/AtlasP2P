@@ -1,0 +1,48 @@
+# ============================================
+# ATLASP2P - CLOUD PRODUCTION OVERRIDES
+# ============================================
+# Adds Caddy reverse proxy with SSL to cloud mode.
+# Use with Supabase Cloud (managed database).
+#
+# Usage:
+#   docker compose -f docker-compose.cloud.yml -f docker-compose.cloud-prod.yml up -d
+#   make prod-cloud
+#
+# Required Environment Variables:
+#   DOMAIN - Your domain (e.g., nodes.example.com)
+#   ACME_EMAIL - Email for Let's Encrypt
+# ============================================
+
+services:
+  # ===========================================
+  # REVERSE PROXY (Single Entry Point)
+  # ===========================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: atlasp2p-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@localhost}
+    volumes:
+      - ./docker/Caddyfile.cloud:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # Production web overrides
+  web:
+    build:
+      target: production
+    ports: []  # Remove direct port exposure, Caddy proxies
+    environment:
+      - NODE_ENV=production
+      - WEB_TARGET=production
+
+volumes:
+  caddy-data:
+  caddy-config:

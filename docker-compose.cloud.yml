@@ -5,11 +5,11 @@
 # Only runs web app + crawler
 # All DB/Auth/Storage handled by Supabase Cloud
 #
-# Usage:
-#   docker compose -f docker-compose.cloud.yml up -d
+# Development:
+#   make cloud-dev
 #
-# Or use Makefile:
-#   make cloud-dev    # Development with cloud DB
+# Production (add Caddy for SSL):
+#   make prod-cloud
 # ============================================
 
 services:
@@ -20,32 +20,32 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
-      target: development
-    container_name: atlasp2p-web-cloud
+      target: ${WEB_TARGET:-development}
+    container_name: atlasp2p-web
     ports:
-      - "4000:4000"
+      - "${PORT:-4000}:${PORT:-4000}"
     env_file:
-      - .env.local
+      - .env
     environment:
-      # Cloud-specific override (both URLs point to same cloud instance)
+      - NODE_ENV=${NODE_ENV:-development}
+      # Cloud mode: internal URL = public URL (no local Kong)
       - SUPABASE_INTERNAL_URL=${NEXT_PUBLIC_SUPABASE_URL}
     volumes:
-      # Avatar fallback storage (if Supabase Storage not configured)
       - avatar-storage:/app/public/avatars
-
-      # Build cache
       - web-next-cache:/app/apps/web/.next/cache
-
-      # Hot reload for development
-      - ./apps/web/src:/app/apps/web/src:ro
-      - ./packages:/app/packages:ro
+      # Dev hot reload (only applies in dev mode)
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - ./config:/app/config
+      - /app/node_modules
+      - /app/apps/web/node_modules
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${PORT:-4000}/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   # ===========================================
   # CRAWLER SERVICE
@@ -54,19 +54,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.crawler
-    container_name: atlasp2p-crawler-cloud
+    container_name: atlasp2p-crawler
     env_file:
-      - .env.local
+      - .env
     environment:
-      # Cloud-specific overrides
+      # Cloud mode: use public Supabase URL
       - SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - GEOIP_DB_PATH=/app/data/geoip
     volumes:
-      # Persist GeoIP databases
       - geoip-data:/app/data/geoip
-
-      # Hot reload for development (optional)
-      # - ./apps/crawler/src:/app/src:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "pgrep", "-f", "python"]
@@ -82,4 +78,4 @@ volumes:
 
 networks:
   default:
-    name: atlasp2p-cloud-network
+    name: atlasp2p-network

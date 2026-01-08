@@ -16,7 +16,7 @@ RESET := \033[0m
 COMPOSE_DOCKER := -f docker-compose.yml -f docker-compose.dev.yml
 COMPOSE_CLOUD := -f docker-compose.cloud.yml
 COMPOSE_PROD_DOCKER := -f docker-compose.yml -f docker-compose.prod.yml
-COMPOSE_PROD_CLOUD := -f docker-compose.cloud.yml -f docker-compose.prod.yml
+COMPOSE_PROD_CLOUD := -f docker-compose.cloud.yml -f docker-compose.cloud-prod.yml
 
 
 # ===========================================

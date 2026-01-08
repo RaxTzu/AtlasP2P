@@ -1,0 +1,36 @@
+# ============================================
+# CADDY REVERSE PROXY - CLOUD MODE
+# ============================================
+# For use with Supabase Cloud (no local Kong).
+# Only proxies to the Next.js web app.
+# Supabase API calls go directly to cloud.
+# ============================================
+
+{$DOMAIN:localhost} {
+    tls {$ACME_EMAIL:admin@localhost}
+
+    log {
+        output stdout
+        format console
+    }
+
+    # ===========================================
+    # WEB APPLICATION (Next.js)
+    # ===========================================
+    reverse_proxy web:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Localhost fallback (HTTP only)
+:80 {
+    @notlocalhost {
+        not host localhost
+    }
+    redir @notlocalhost https://{host}{uri} permanent
+
+    reverse_proxy web:3000
+}
