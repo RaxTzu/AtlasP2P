@@ -1,12 +1,11 @@
 # Example Configurations
 
-This directory contains example configurations for different cryptocurrencies to demonstrate how easy it is to fork and customize the Nodes Map for your chain.
+This directory contains example configurations for different cryptocurrencies to demonstrate how easy it is to fork and customize AtlasP2P for your chain.
 
 ## Available Examples
 
-- **dogecoin.config.ts** - Dogecoin Nodes Map configuration
-- **bitcoin.config.ts** - Bitcoin Nodes Map configuration
-- **litecoin.config.ts** - Litecoin Nodes Map configuration
+- **dingocoin.config.yaml** - Dingocoin Nodes Map configuration (complete example)
+- **dogecoin.config.yaml** - Dogecoin Nodes Map configuration (minimal example)
 
 ## How to Use These Examples
 
@@ -15,9 +14,14 @@ This directory contains example configurations for different cryptocurrencies to
 1. Choose an example config that matches your chain
 2. Copy it to replace the main config:
    ```bash
-   cp config/examples/dogecoin.config.ts config/project.config.ts
+   cp config/examples/dingocoin.config.yaml config/project.config.yaml
    ```
-3. Edit `config/project.config.ts` to customize further
+3. Edit `config/project.config.yaml` to customize:
+   - Chain configuration (name, ports, DNS seeds)
+   - Theme colors and branding
+   - Social links
+   - Feature flags
+   - **Deployment settings** (registry type, Caddy mode, secrets source)
 4. Add your logos to `apps/web/public/logos/`
 5. Deploy!
 
@@ -76,6 +80,27 @@ Enable/disable features:
 - `features.tipping.enabled` - Enable node tipping
 - `features.community.leaderboard` - Show leaderboard
 - And many more...
+
+### 6. Deployment Configuration
+Configure automated production deployment:
+
+**Registry Choice:**
+- `deployment.registry.type: ghcr` - Free, unlimited public images (recommended)
+- `deployment.registry.type: ecr` - AWS private images (for enterprise)
+
+**Caddy Mode:**
+- `deployment.caddy.mode: auto` - Auto-detect (recommended)
+- `deployment.caddy.mode: container` - Use container Caddy
+- `deployment.caddy.mode: host` - Use host Caddy
+- `deployment.caddy.mode: none` - No Caddy (behind load balancer)
+
+**Secrets Management:**
+- `deployment.secrets.source: auto` - Auto-detect (recommended)
+- `deployment.secrets.source: aws-ssm` - AWS Parameter Store
+- `deployment.secrets.source: github-secrets` - GitHub Secrets
+- `deployment.secrets.source: manual` - Manual .env on server
+
+See [CI/CD Documentation](../../docs/CICD.md) for complete deployment setup guide.
 
 ## Logo Assets Required
 

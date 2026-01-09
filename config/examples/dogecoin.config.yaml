@@ -138,3 +138,43 @@ assets:
   logoPath: /logos/dogecoin.png
   faviconPath: /logos/dogecoin-favicon.ico
   ogImagePath: /logos/dogecoin-og.png
+
+# ===========================================
+# DEPLOYMENT CONFIGURATION (OPTIONAL)
+# ===========================================
+# Configure automated CI/CD deployment
+# See docs/CICD.md for complete guide
+
+deployment:
+  mode: self-hosted-docker  # or self-hosted-cloud
+
+  # Docker Registry - GHCR (free) or ECR (AWS)
+  registry:
+    type: ghcr           # ghcr (recommended) or ecr
+    public: true         # Make GHCR images public (no auth on host)
+    region: us-east-1    # Only for ECR
+
+  # Caddy reverse proxy with auto-SSL
+  caddy:
+    enabled: true
+    mode: auto           # auto | container | host | none
+
+  # Secrets management
+  secrets:
+    source: auto         # auto | aws-ssm | github-secrets | manual
+    ssmPath: /dogecoin-nodes/prod/env
+
+  # Health check and rollback
+  healthCheck:
+    enabled: true
+    endpoint: /api/stats
+    timeout: 30
+    retries: 3
+
+  backup:
+    enabled: true
+    retention: 7
+
+  rollback:
+    enabled: true
+    onHealthCheckFail: true

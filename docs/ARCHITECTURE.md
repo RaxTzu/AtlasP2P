@@ -59,7 +59,7 @@ AtlasP2P/
 │       │   ├── protocol.py    # Bitcoin protocol implementation
 │       │   ├── geoip.py       # GeoIP lookup service
 │       │   └── database.py    # Database operations
-│       └── adapters/          # Chain-specific adapters
+│       │   └── config.py      # Reads chainConfig from project.config.yaml
 ├── packages/
 │   └── types/                 # Shared TypeScript types
 ├── supabase/
@@ -333,10 +333,11 @@ class ChainAdapter:
 ```
 
 **Supported Chains**:
-- Bitcoin (reference implementation)
-- Litecoin (adapter ready)
-- Dogecoin (adapter ready)
-- Any Bitcoin-derived chain (via config)
+- Bitcoin (via config)
+- Litecoin (via config)
+- Dogecoin (via config)
+- Dingocoin (example in config/project.config.yaml.example)
+- Any Bitcoin-derived chain (configure in project.config.yaml)
 
 ### Crawler Configuration
 

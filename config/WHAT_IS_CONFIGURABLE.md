@@ -114,6 +114,40 @@ Control which features are enabled:
 **UI Features:**
 - darkMode, themeSwitcher
 
+### 8. Deployment Configuration
+
+Control production deployment behavior:
+
+**Deployment Mode:**
+- mode (self-hosted-docker | self-hosted-cloud)
+
+**Docker Registry:**
+- type (ghcr | ecr) - GitHub Container Registry or AWS Elastic Container Registry
+- public (true/false) - Make GHCR images public (no auth needed on host)
+- region (string) - AWS region for ECR (e.g., us-east-1)
+
+**Caddy Configuration:**
+- enabled (true/false) - Enable Caddy reverse proxy
+- mode (auto | container | host | none) - Caddy deployment mode
+
+**Secrets Management:**
+- source (auto | aws-ssm | github-secrets | manual) - Where to fetch secrets
+- ssmPath (string) - AWS SSM parameter path (if using aws-ssm)
+
+**Health Check:**
+- enabled (true/false)
+- endpoint (string) - API endpoint to check (e.g., /api/stats)
+- timeout (number) - Seconds to wait per check
+- retries (number) - Number of retry attempts
+
+**Backup:**
+- enabled (true/false) - Backup database before deployment
+- retention (number) - Days to keep backups
+
+**Rollback:**
+- enabled (true/false) - Auto-rollback on failure
+- onHealthCheckFail (true/false) - Rollback if health check fails
+
 ## ❌ NOT Configurable (By Design)
 
 These belong in `.env` or code:

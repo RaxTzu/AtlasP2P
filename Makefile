@@ -6,7 +6,8 @@
         setup-docker setup-cloud setup-fork \
         docker-dev docker-down docker-logs \
         cloud-dev cloud-down cloud-logs \
-        prod-docker prod-cloud prod-down prod-logs prod-restart \
+        prod-docker prod-docker-no-caddy prod-cloud prod-cloud-no-caddy \
+        prod-down prod-logs prod-restart \
         docker-clean config-reload config-check \
         migrate migrate-file migrate-create migrate-reset \
         db-shell db-backup db-restore \
@@ -255,13 +256,13 @@ config-reload: ## Reload config (restart web)
 # PRODUCTION
 # ===========================================
 
-prod-docker: ## Production - Self-hosted (full stack + SSL)
-	@echo "$(CYAN)Starting production (self-hosted)...$(RESET)"
+prod-docker: ## Production - Self-hosted (full stack + Caddy SSL)
+	@echo "$(CYAN)Starting production (self-hosted with Caddy)...$(RESET)"
 	@if [ -z "$(DOMAIN)" ] && ! grep -q "^DOMAIN=" .env 2>/dev/null; then \
 		echo "$(RED)Error: DOMAIN not set in .env$(RESET)"; \
 		exit 1; \
 	fi
-	@docker compose $(COMPOSE_PROD_DOCKER) up -d --build
+	@docker compose $(COMPOSE_PROD_DOCKER) --profile with-caddy up -d --build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
@@ -270,19 +271,43 @@ prod-docker: ## Production - Self-hosted (full stack + SSL)
 	@echo "  $(CYAN)Website:$(RESET) https://$$(grep ^DOMAIN= .env | cut -d= -f2)"
 	@echo ""
 
-prod-cloud: ## Production - Cloud DB + Docker app + SSL
-	@echo "$(CYAN)Starting production (cloud mode)...$(RESET)"
+prod-docker-no-caddy: ## Production - Self-hosted WITHOUT container Caddy (use host proxy)
+	@echo "$(CYAN)Starting production (self-hosted, no container Caddy)...$(RESET)"
+	@docker compose $(COMPOSE_PROD_DOCKER) up -d --build
+	@echo ""
+	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
+	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
+	@echo "$(GREEN)╚═══════════════════════════════════════╝$(RESET)"
+	@echo ""
+	@echo "  $(CYAN)Web Port:$(RESET) $$(grep ^WEB_PORT= .env 2>/dev/null | cut -d= -f2 || echo 4000)"
+	@echo "  $(YELLOW)Configure your host reverse proxy to forward to port above$(RESET)"
+	@echo ""
+
+prod-cloud: ## Production - Cloud DB + Docker app + Caddy SSL
+	@echo "$(CYAN)Starting production (cloud mode with Caddy)...$(RESET)"
 	@if [ -z "$(DOMAIN)" ] && ! grep -q "^DOMAIN=" .env 2>/dev/null; then \
 		echo "$(RED)Error: DOMAIN not set in .env$(RESET)"; \
 		exit 1; \
 	fi
-	@docker compose $(COMPOSE_PROD_CLOUD) up -d --build
+	@docker compose $(COMPOSE_PROD_CLOUD) --profile with-caddy up -d --build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
 	@echo "$(GREEN)╚═══════════════════════════════════════╝$(RESET)"
 	@echo ""
 	@echo "  $(CYAN)Website:$(RESET) https://$$(grep ^DOMAIN= .env | cut -d= -f2)"
+	@echo ""
+
+prod-cloud-no-caddy: ## Production - Cloud DB WITHOUT container Caddy (use host proxy)
+	@echo "$(CYAN)Starting production (cloud mode, no container Caddy)...$(RESET)"
+	@docker compose $(COMPOSE_PROD_CLOUD) up -d --build
+	@echo ""
+	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
+	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
+	@echo "$(GREEN)╚═══════════════════════════════════════╝$(RESET)"
+	@echo ""
+	@echo "  $(CYAN)Web Port:$(RESET) $$(grep ^WEB_PORT= .env 2>/dev/null | cut -d= -f2 || echo 4000)"
+	@echo "  $(YELLOW)Configure your host reverse proxy to forward to port above$(RESET)"
 	@echo ""
 
 prod-down: ## Stop production

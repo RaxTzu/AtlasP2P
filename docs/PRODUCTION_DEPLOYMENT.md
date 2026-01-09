@@ -34,30 +34,39 @@ This project is **production-ready** with the following infrastructure:
 
 ## Production Deployment Options
 
-### Option 1: GitHub Actions (Current Setup)
+### Option 1: Automated CI/CD (Recommended)
 
-**Registry:** GitHub Container Registry (GHCR)
+**Complete automated deployment pipeline** with smart infrastructure detection.
 
-**Workflow:** `.github/workflows/deploy.yml`
+**Workflow:** `.github/workflows/deploy-production.yml`
 
-1. **On push to main:**
-   - Builds web and crawler Docker images
-   - Pushes to `ghcr.io/<your-org>/<repo>-web:latest`
-   - Pushes to `ghcr.io/<your-org>/<repo>-crawler:latest`
-   - SSH deploys to production server
-   - Runs health check
+**Features:**
+- ✅ Auto-detects Caddy mode (container/host/none)
+- ✅ Auto-detects secrets source (AWS SSM/GitHub/manual)
+- ✅ Supports GHCR or ECR registry (easily switchable)
+- ✅ Smart host authentication (uses AWS CLI if available)
+- ✅ Database backups before deployment
+- ✅ Health checks with automatic rollback
+- ✅ Builds and deploys on every push to master
 
-2. **Required Secrets:**
-   ```bash
-   # GitHub Settings → Secrets → Actions
-   NEXT_PUBLIC_SUPABASE_URL
-   NEXT_PUBLIC_SUPABASE_ANON_KEY
-   DEPLOY_HOST          # Production server IP/domain
-   DEPLOY_USER          # SSH username
-   DEPLOY_KEY           # SSH private key
-   DEPLOY_PATH          # Path to docker-compose.yml on server
-   HEALTH_CHECK_URL     # https://your-domain.com
-   ```
+**Registry Options:**
+- **GHCR (GitHub Container Registry)** - Free, unlimited public images (default)
+- **ECR (AWS Elastic Container Registry)** - Private, AWS-integrated
+
+Configure registry in `config/project.config.yaml`:
+```yaml
+deployment:
+  registry:
+    type: ghcr  # or ecr
+    public: true  # GHCR only
+    region: us-east-1  # ECR only
+```
+
+**Setup Guide:** See [Complete CI/CD Documentation](./CICD.md) for:
+- Full configuration options
+- Secrets management (AWS SSM, GitHub Secrets, manual)
+- Registry setup (GHCR vs ECR)
+- Troubleshooting and advanced features
 
 3. **Server Setup:**
    ```bash
@@ -76,35 +85,47 @@ This project is **production-ready** with the following infrastructure:
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
-### Option 2: AWS ECR + ECS (Like Dingocoin-Ecosystem)
+### Option 2: Manual Docker Deployment
 
-**Registry:** AWS Elastic Container Registry (ECR)
+**For testing or when you prefer manual control.**
 
-**Advantages:**
-- Automatic scaling with ECS/Fargate
-- Integrated with AWS services (RDS, Parameter Store, CloudWatch)
-- Better for high-traffic production
+**Self-hosted with all services (Database included):**
+```bash
+# On your server
+git clone https://github.com/your-org/atlasp2p
+cd atlasp2p
+cp .env.docker.example .env
+nano .env  # Configure all secrets
 
-**Implementation:**
+# Start production with Caddy SSL
+make prod-docker
 
-1. **Create ECR Repositories:**
-   ```bash
-   aws ecr create-repository --repository-name atlasp2p-web
-   aws ecr create-repository --repository-name atlasp2p-crawler
-   ```
+# Or without Caddy (if you have host reverse proxy)
+make prod-docker-no-caddy
+```
 
-2. **Store Secrets in AWS SSM:**
-   ```bash
-   aws ssm put-parameter \
-     --name /atlasp2p/env \
-     --type SecureString \
-     --value "$(cat .env.production)"
-   ```
+**Cloud mode (Supabase Cloud database):**
+```bash
+# On your server
+git clone https://github.com/your-org/atlasp2p
+cd atlasp2p
+cp .env.cloud.example .env
+nano .env  # Add Supabase credentials
 
-3. **Modify Workflow:**
-   - Replace `docker/login-action` with `aws-actions/amazon-ecr-login`
-   - Change registry from `ghcr.io` to `<account-id>.dkr.ecr.<region>.amazonaws.com`
-   - Add AWS credentials to GitHub secrets
+# Start production with Caddy SSL
+make prod-cloud
+
+# Or without Caddy
+make prod-cloud-no-caddy
+```
+
+**Note:** Manual deployment requires:
+- Docker and Docker Compose installed
+- All secrets configured in .env
+- DNS pointing to server (for SSL)
+- Manual updates on every code change
+
+For automated deployments with CI/CD, see Option 1 above.
 
 ## Docker Services Breakdown
 
@@ -133,7 +154,7 @@ This project is **production-ready** with the following infrastructure:
    - Next.js 16 with App Router
    - API routes for verification, profiles, tipping
    - Port: 4000 (development), 443 with Caddy (production)
-   - Dockerfile: `docker/Dockerfile.web`
+   - Dockerfile: `Dockerfile.web`
 
 6. **Crawler** (`atlasp2p-crawler`)
    - Python P2P network scanner
@@ -269,15 +290,15 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 When forking for a new chain:
 
 1. **Update chain config:**
-   - `config/project.config.yaml` - All chain configuration
-   - `apps/crawler/src/config.py` - P2P protocol settings
+   - `config/project.config.yaml` - All chain configuration (crawler reads this automatically)
 
 2. **Update branding:**
    - `config/project.config.yaml` - Colors, logos, and styling
-   - Restart web container: `docker restart atlasp2p-web`
+   - Restart containers: `docker restart atlasp2p-web atlasp2p-crawler`
 
-3. **GitHub Workflow Updates:**
-   - Update registry and secrets in `.github/workflows/deploy.yml`
+3. **CI/CD Configuration:**
+   - Configure deployment in `config/project.config.yaml`
+   - See [CI/CD Guide](./CICD.md) for registry and secrets setup
 
 4. **Deploy:**
    ```bash

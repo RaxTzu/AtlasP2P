@@ -17,6 +17,8 @@ services:
   # ===========================================
   # REVERSE PROXY (Single Entry Point)
   # ===========================================
+  # Only included when using --profile with-caddy
+  # Use prod-cloud-no-caddy if you have host Caddy
   caddy:
     image: caddy:2-alpine
     container_name: atlasp2p-caddy
@@ -33,15 +35,28 @@ services:
     depends_on:
       - web
     restart: unless-stopped
+    profiles:
+      - with-caddy
 
   # Production web overrides
+  # Uses pre-built image from CI/CD (GHCR or ECR)
+  # When with-caddy: no exposed ports (Caddy proxies)
+  # When no-caddy: expose port for external reverse proxy
   web:
-    build:
-      target: production
-    ports: []  # Remove direct port exposure, Caddy proxies
+    image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG:-latest}
+    container_name: atlasp2p-web
+    ports:
+      - "${WEB_PORT:-4000}:3000"  # Exposed when NOT using Caddy
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
+    restart: unless-stopped
+
+  # Crawler uses pre-built image
+  crawler:
+    image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG:-latest}
+    container_name: atlasp2p-crawler
+    restart: unless-stopped
 
 volumes:
   atlasp2p_caddy-data:

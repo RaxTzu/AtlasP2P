@@ -433,6 +433,56 @@ export const AssetsConfigSchema = z.object({
 });
 
 // ===========================================
+// DEPLOYMENT CONFIGURATION
+// ===========================================
+
+export const DeploymentRegistrySchema = z.object({
+  type: z.enum(['ghcr', 'ecr'], {
+    errorMap: () => ({ message: 'Registry type must be either "ghcr" (GitHub Container Registry) or "ecr" (AWS Elastic Container Registry)' })
+  }),
+  public: z.boolean().optional().default(true),
+  region: z.string().optional().default('us-east-1'),
+  imagePattern: z.string().optional(),
+});
+
+export const DeploymentCaddySchema = z.object({
+  enabled: z.boolean().default(true),
+  mode: z.enum(['auto', 'container', 'host', 'none']).default('auto'),
+});
+
+export const DeploymentSecretsSchema = z.object({
+  source: z.enum(['auto', 'aws-ssm', 'github-secrets', 'manual']).default('auto'),
+  ssmPath: z.string().optional(),
+});
+
+export const DeploymentHealthCheckSchema = z.object({
+  enabled: z.boolean().default(true),
+  endpoint: z.string().default('/api/stats'),
+  timeout: z.number().positive().default(30),
+  retries: z.number().int().positive().default(3),
+});
+
+export const DeploymentBackupSchema = z.object({
+  enabled: z.boolean().default(true),
+  retention: z.number().int().positive().default(7),
+});
+
+export const DeploymentRollbackSchema = z.object({
+  enabled: z.boolean().default(true),
+  onHealthCheckFail: z.boolean().default(true),
+});
+
+export const DeploymentConfigSchema = z.object({
+  mode: z.enum(['self-hosted-docker', 'self-hosted-cloud', 'cloud-serverless']).default('self-hosted-docker'),
+  registry: DeploymentRegistrySchema,
+  caddy: DeploymentCaddySchema,
+  secrets: DeploymentSecretsSchema,
+  healthCheck: DeploymentHealthCheckSchema,
+  backup: DeploymentBackupSchema,
+  rollback: DeploymentRollbackSchema,
+}).optional();
+
+// ===========================================
 // ROOT PROJECT CONFIG SCHEMA
 // ===========================================
 
@@ -447,6 +497,7 @@ export const ProjectConfigSchema = z.object({
   adminConfig: AdminConfigSchema,
   features: FeatureFlagsSchema,
   assets: AssetsConfigSchema,
+  deployment: DeploymentConfigSchema,
 });
 
 // ===========================================

@@ -81,6 +81,36 @@ make prod-cloud    # Cloud Supabase + Docker app
 
 **Access**: https://nodes.yourcoin.org (Caddy handles SSL certificates automatically)
 
+### Automated CI/CD Deployment
+
+**Configure once, deploy forever** with our GitHub Actions workflow:
+
+```bash
+# 1. Configure deployment in config/project.config.yaml
+deployment:
+  mode: self-hosted-docker  # or self-hosted-cloud
+  caddy:
+    mode: auto  # auto-detects infrastructure
+  secrets:
+    source: auto  # AWS SSM, GitHub Secrets, or manual
+
+# 2. Add GitHub Variables and Secrets
+# Settings → Secrets and variables → Actions
+DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH, SSH_PRIVATE_KEY
+
+# 3. Push to master - automatic deployment!
+git push origin master
+```
+
+**Features:**
+- ✅ Auto-detects Caddy (container/host/none)
+- ✅ Auto-detects secrets management (SSM/GitHub/manual)
+- ✅ Health checks with automatic rollback
+- ✅ Database backups before deployment
+- ✅ Multi-secrets sources (AWS Parameter Store, GitHub Secrets, manual .env)
+
+**See:** [docs/CICD.md](./docs/CICD.md) for complete automated deployment guide
+
 ## Tech Stack
 
 **Frontend**:

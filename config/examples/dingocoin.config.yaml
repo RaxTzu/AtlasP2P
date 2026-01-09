@@ -490,3 +490,68 @@ assets:
   logoPath: /logos/atlasp2p.svg
   faviconPath: /logos/atlasp2p-favicon.ico
   ogImagePath: /logos/atlasp2p-og.png
+
+# ===========================================
+# DEPLOYMENT CONFIGURATION
+# ===========================================
+# Automated CI/CD deployment settings
+# See docs/CICD.md for complete setup guide
+
+deployment:
+  # Deployment mode
+  mode: self-hosted-docker  # self-hosted-docker | self-hosted-cloud
+
+  # Docker Registry configuration
+  registry:
+    # Registry type: ghcr | ecr
+    # ghcr = GitHub Container Registry (ghcr.io) - free, unlimited public images
+    # ecr = AWS Elastic Container Registry - private, AWS-integrated
+    type: ghcr
+
+    # For GHCR: Make images public? (no auth needed on host if true)
+    # For ECR: Ignored (ECR images are private by default)
+    public: true
+
+    # For ECR only: AWS region where your ECR registry exists
+    # Example: us-east-1, eu-west-1, ap-southeast-1
+    # Ignored if type=ghcr
+    region: us-east-1
+
+  # Caddy reverse proxy configuration
+  caddy:
+    enabled: true
+    # Mode: auto | container | host | none
+    # auto = Auto-detect (checks if systemd Caddy running, if ports occupied)
+    # container = Use Caddy in Docker container (for SSL)
+    # host = Use existing Caddy on host (web exposes port 4000)
+    # none = No Caddy (behind external load balancer)
+    mode: auto
+
+  # Secrets management
+  secrets:
+    # Source: auto | aws-ssm | github-secrets | manual
+    # auto = Auto-detect (tries AWS SSM, then GitHub Secrets, then manual)
+    # aws-ssm = Fetch from AWS Parameter Store
+    # github-secrets = Use GitHub Secrets (all vars as individual secrets)
+    # manual = Expect .env file on server (no fetching)
+    source: auto
+
+    # AWS SSM parameter path (only if source=aws-ssm)
+    ssmPath: /atlasp2p/prod/env
+
+  # Health check after deployment
+  healthCheck:
+    enabled: true
+    endpoint: /api/stats
+    timeout: 30
+    retries: 3
+
+  # Database backup before deployment (self-hosted only)
+  backup:
+    enabled: true
+    retention: 7  # Days to keep backups
+
+  # Automatic rollback on failure
+  rollback:
+    enabled: true
+    onHealthCheckFail: true

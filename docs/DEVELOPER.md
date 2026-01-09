@@ -70,8 +70,8 @@ AtlasP2P/
 │       ├── src/
 │       │   ├── crawler.py     # Main crawler
 │       │   ├── protocol.py    # P2P protocol
-│       │   └── geoip.py       # GeoIP lookup
-│       └── adapters/          # Chain-specific configs
+│       │   ├── geoip.py       # GeoIP lookup
+│       │   └── config.py      # Loads chainConfig from YAML
 ├── packages/
 │   ├── types/                 # Shared TypeScript types
 │   └── config/                # Chain configs
@@ -353,12 +353,12 @@ test: add tests for node profiles
      # ... other settings
    ```
 
-2. Update crawler config in `apps/crawler/src/config.py` if needed
-
-3. Restart web container to load new config:
+2. Restart containers to load new config:
    ```bash
-   docker restart atlasp2p-web
+   docker restart atlasp2p-web atlasp2p-crawler
    ```
+
+**Note**: The crawler automatically reads from `project.config.yaml`. No need to modify Python files!
 
 ### Working with the Crawler
 
@@ -377,8 +377,8 @@ make logs-crawler
 ```
 
 **Modify crawler behavior:**
-- Edit `apps/crawler/src/crawler.py`
-- Update chain config in `apps/crawler/src/config.py`
+- Edit `apps/crawler/src/crawler.py` for crawler logic changes
+- Update chain settings in `config/project.config.yaml` (crawler reads this automatically)
 - Adjust environment variables in `.env`
 
 ---

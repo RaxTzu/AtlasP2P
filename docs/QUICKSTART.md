@@ -346,7 +346,7 @@ supabase db push
 
 ```bash
 # Check crawler logs
-make crawler-logs
+make logs-crawler
 
 # Verify chain config
 cat config/project.config.yaml

@@ -523,3 +523,123 @@ assets:
   logoPath: /logos/atlasp2p.svg
   faviconPath: /logos/atlasp2p-favicon.ico
   ogImagePath: /logos/atlasp2p-og.png
+
+# ===========================================
+# DEPLOYMENT CONFIGURATION
+# ===========================================
+# CI/CD and production deployment settings
+# Configure once for your infrastructure, then forget about it!
+deployment:
+  # Deployment mode
+  # Options: self-hosted-docker | self-hosted-cloud | cloud-serverless
+  mode: self-hosted-docker
+
+  # Caddy reverse proxy configuration
+  caddy:
+    # Enable Caddy at all? (If you have nginx/Traefik, set to false)
+    enabled: true
+
+    # Caddy mode: auto | container | host | none
+    # auto = automatically detect best option
+    # container = run Caddy in Docker (default for new deployments)
+    # host = use system Caddy (systemctl) - good if you have other sites
+    # none = no Caddy, expose ports for external reverse proxy
+    mode: auto
+
+  # Secrets management
+  secrets:
+    # Source: auto | aws-ssm | github-secrets | manual
+    # auto = try AWS SSM, fallback to GitHub secrets, then manual
+    # aws-ssm = fetch from AWS Systems Manager Parameter Store
+    # github-secrets = use GitHub Actions secrets
+    # manual = .env file already exists on server
+    source: auto
+
+    # AWS SSM Parameter Store path (only if using aws-ssm)
+    # Format: /atlasp2p/{environment}/env
+    # Stores entire .env file as single SecureString parameter
+    ssmPath: /atlasp2p/prod/env
+
+  # Docker Registry configuration
+  registry:
+    # Registry type: ghcr | ecr
+    # ghcr = GitHub Container Registry (ghcr.io) - free, unlimited public images
+    # ecr = AWS Elastic Container Registry - private, AWS-integrated
+    type: ghcr
+
+    # For GHCR: Make images public? (no auth needed on host if true)
+    # For ECR: Ignored (ECR images are private by default)
+    public: true
+
+    # For ECR only: AWS region where your ECR registry exists
+    # Example: us-east-1, eu-west-1, ap-southeast-1
+    # Ignored if type=ghcr
+    region: us-east-1
+
+    # Image naming pattern (optional, uses defaults if not set)
+    # {repo} = GitHub repository name (owner/repo)
+    # {service} = web, crawler, etc.
+    # Default GHCR: ghcr.io/{repo}-{service}:latest
+    # Default ECR: {account}.dkr.ecr.{region}.amazonaws.com/{repo}/{service}:latest
+    # imagePattern: "custom-{service}:latest"
+
+  # Health checks and validation
+  healthCheck:
+    enabled: true
+    endpoint: /api/stats
+    timeout: 30           # Seconds to wait for health check
+    retries: 3            # Number of retry attempts
+    retryDelay: 5         # Seconds between retries
+
+  # Resource limits (prevents OOM, CPU throttling)
+  resources:
+    web:
+      memory: 2g          # Docker memory limit
+      cpus: "1.0"         # CPU cores (string format for docker compose)
+    crawler:
+      memory: 1g
+      cpus: "0.5"
+    db:
+      memory: 2g          # Only for self-hosted-docker mode
+      cpus: "1.0"
+
+  # Database backup (self-hosted-docker only)
+  backup:
+    enabled: true
+    retention: 7          # Keep last N backups
+    schedule: "0 2 * * *" # Cron schedule (2 AM daily)
+
+  # Automatic rollback on deployment failure
+  rollback:
+    enabled: true
+    onHealthCheckFail: true
+    onBuildFail: false    # Don't rollback if build fails (nothing deployed yet)
+
+  # Post-deployment notifications
+  notifications:
+    # Slack webhook URL (store in .env as SLACK_WEBHOOK_URL)
+    slack:
+      enabled: false
+      channel: "#deployments"
+
+    # Discord webhook URL (store in .env as DISCORD_WEBHOOK_URL)
+    discord:
+      enabled: false
+
+    # Email notifications (uses SMTP from .env)
+    email:
+      enabled: false
+      recipients: []
+
+  # Monitoring integration (optional)
+  monitoring:
+    # UptimeRobot - free uptime monitoring
+    uptimerobot:
+      enabled: false
+      # API key stored in .env as UPTIMEROBOT_API_KEY
+      interval: 300       # Check every 5 minutes
+
+    # Better Uptime
+    betteruptime:
+      enabled: false
+      # API key stored in .env as BETTERUPTIME_API_KEY

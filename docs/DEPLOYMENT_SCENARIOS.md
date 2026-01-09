@@ -24,6 +24,21 @@ This document covers **EVERY** way you can deploy AtlasP2P, from development to 
 
 ---
 
+## 🤖 Automated CI/CD
+
+**AtlasP2P includes a complete CI/CD pipeline for automated production deployments.**
+
+- Auto-detects infrastructure (Caddy, secrets management)
+- Builds and deploys on push to master
+- Health checks with automatic rollback
+- Multiple secrets sources (AWS SSM, GitHub Secrets, manual)
+
+**Setup:** Configure once in `config/project.config.yaml`, deploy forever.
+
+**See:** [CI/CD Documentation](./CICD.md) for complete guide.
+
+---
+
 ## 🔍 Detailed Scenarios
 
 ### Scenario 1: Dev - Local Docker (Default)
@@ -150,13 +165,15 @@ Terminal (foreground)
 
 **Setup:**
 ```bash
-# 1. Start database
-make up
+# 1. Start database services (in background)
+make docker-dev  # Starts all services
+# OR manually start only DB + Supabase services:
+# docker compose -f docker-compose.yml up -d db kong auth rest meta
 
 # 2. Run migrations
 make migrate
 
-# 3. Start Next.js
+# 3. Start Next.js in dev mode (foreground, hot reload)
 pnpm --filter @atlasp2p/web dev
 ```
 
@@ -184,7 +201,7 @@ Docker Compose
 └── Crawler
 ```
 
-**Setup:**
+**Setup (Manual):**
 ```bash
 # On production server
 git clone https://github.com/YourOrg/YourNodes.git
@@ -201,8 +218,18 @@ SMTP_PORT=587
 SMTP_USER=apikey
 SMTP_PASS=your-key
 
-# Start
+# Start (with Caddy)
 make prod-docker
+
+# OR start without container Caddy (if host Caddy installed)
+make prod-docker-no-caddy
+```
+
+**Setup (Automated CI/CD):**
+```bash
+# Configure deployment in config/project.config.yaml
+# See docs/CICD.md for complete guide
+# Then just push to master - automatic deployment!
 ```
 
 **Includes:**
@@ -249,7 +276,7 @@ Supabase Cloud (managed)
 └── Realtime
 ```
 
-**Setup:**
+**Setup (Manual):**
 ```bash
 # 1. Create Supabase project
 supabase projects create nodes-prod --org-id xxx --region us-east-1
@@ -275,8 +302,18 @@ supabase db push
 # 4. Create storage bucket (SQL Editor)
 # See SUPABASE_QUICKSTART.md
 
-# 5. Start
+# 5. Start (with Caddy)
 make prod-cloud
+
+# OR start without container Caddy
+make prod-cloud-no-caddy
+```
+
+**Setup (Automated CI/CD):**
+```bash
+# Configure deployment in config/project.config.yaml
+# Set mode: self-hosted-cloud
+# See docs/CICD.md for complete guide
 ```
 
 **Benefits:**

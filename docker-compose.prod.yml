@@ -21,6 +21,8 @@ services:
   # ===========================================
   # REVERSE PROXY (Single Entry Point)
   # ===========================================
+  # Only included when using --profile with-caddy
+  # Use prod-docker-no-caddy if you have host Caddy
   caddy:
     image: caddy:2-alpine
     container_name: atlasp2p-caddy
@@ -38,18 +40,26 @@ services:
       - web
       - kong
     restart: unless-stopped
+    profiles:
+      - with-caddy
 
-  # Production web app (no exposed ports, Caddy proxies)
+  # Production web app
+  # Uses pre-built image from CI/CD (GHCR or ECR)
+  # When with-caddy profile: no exposed ports (Caddy proxies)
+  # When no-caddy: expose port 4000 for external reverse proxy
   web:
-    build:
-      target: production
+    image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG:-latest}
+    container_name: atlasp2p-web
     env_file:
       - .env
+    ports:
+      - "${WEB_PORT:-4000}:3000"  # Exposed when NOT using Caddy
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
-      # In production, browser calls same origin, proxied by Caddy
+      # In production, browser calls same origin, proxied by Caddy/external proxy
       - NEXT_PUBLIC_SUPABASE_URL=https://${DOMAIN:-localhost}/supabase
+    restart: unless-stopped
 
   # Override auth for production URLs
   auth:
@@ -65,10 +75,9 @@ services:
       GOTRUE_SMTP_PASS: ${SMTP_PASS}
 
   # Crawler for production
+  # Uses pre-built image from CI/CD (GHCR or ECR)
   crawler:
-    build:
-      context: .
-      dockerfile: Dockerfile.crawler
+    image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG:-latest}
     container_name: atlasp2p-crawler
     env_file:
       - .env

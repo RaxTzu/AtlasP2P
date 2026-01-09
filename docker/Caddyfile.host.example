@@ -1,0 +1,108 @@
+# ============================================
+# CADDYFILE FOR HOST-INSTALLED CADDY
+# ============================================
+# Use this file if you have Caddy installed on your HOST system (not in Docker)
+# and want to reverse proxy to AtlasP2P running in containers.
+#
+# This is for: make prod-docker-no-caddy or make prod-cloud-no-caddy
+#
+# Installation:
+#   1. Copy this file to your Caddy config directory:
+#      sudo cp docker/Caddyfile.host.example /etc/caddy/sites/atlasp2p.Caddyfile
+#   2. Edit the domain name below
+#   3. Reload Caddy: sudo systemctl reload caddy
+#
+# Requirements:
+#   - Caddy 2.x installed on host (not in container)
+#   - AtlasP2P running with: make prod-docker-no-caddy
+#   - Web container exposing port ${WEB_PORT:-4000}
+# ============================================
+
+# Replace with your actual domain
+nodes.example.com {
+    # Automatic HTTPS with Let's Encrypt
+    # No manual configuration needed!
+
+    # Reverse proxy to web container
+    # Default port: 4000 (configurable via WEB_PORT in .env)
+    reverse_proxy localhost:4000
+
+    # Optional: Add custom headers
+    header {
+        # Security headers
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+
+        # Remove server header
+        -Server
+    }
+
+    # Optional: Enable compression
+    encode gzip
+
+    # Optional: Custom error pages
+    handle_errors {
+        @502 expression {http.error.status_code} == 502
+        handle @502 {
+            respond "Service temporarily unavailable. Please try again in a moment." 502
+        }
+    }
+
+    # Access logs (optional)
+    log {
+        output file /var/log/caddy/atlasp2p-access.log
+        format json
+    }
+}
+
+# ============================================
+# EXAMPLE: Multi-domain setup
+# ============================================
+# If you're running multiple blockchain nodes on the same server:
+#
+# nodes.bitcoin.org {
+#     reverse_proxy localhost:4000
+# }
+#
+# nodes.litecoin.org {
+#     reverse_proxy localhost:4100
+# }
+#
+# nodes.dogecoin.org {
+#     reverse_proxy localhost:4200
+# }
+# ============================================
+
+# ============================================
+# EXAMPLE: Redirect www to non-www
+# ============================================
+# www.nodes.example.com {
+#     redir https://nodes.example.com{uri} permanent
+# }
+# ============================================
+
+# ============================================
+# TROUBLESHOOTING
+# ============================================
+#
+# Issue: "dial tcp [::1]:4000: connect: connection refused"
+# Fix: Verify web container is running and port is exposed:
+#      docker ps | grep atlasp2p-web
+#      docker port atlasp2p-web
+#
+# Issue: "502 Bad Gateway"
+# Fix: Check web container logs:
+#      docker logs atlasp2p-web
+#
+# Issue: "certificate error"
+# Fix: Ensure ports 80 and 443 are open:
+#      sudo ufw allow 80/tcp
+#      sudo ufw allow 443/tcp
+#
+# Issue: Multiple Caddy instances
+# Fix: Stop container Caddy if running:
+#      docker compose down caddy
+#      Use: make prod-docker-no-caddy
+# ============================================
