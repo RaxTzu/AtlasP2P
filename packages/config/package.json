@@ -9,8 +9,7 @@
     "./loader.server": "./src/loader.server.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@atlasp2p/types": "workspace:*",
