@@ -353,14 +353,18 @@ jobs:
       - name: Set registry URLs
         id: registry
         run: |
+          # Lowercase for Docker registry compatibility
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+
           if [ "${{ needs.detect-config.outputs.registry_type }}" = "ghcr" ]; then
             # GHCR: ghcr.io/owner/repo-service:latest
-            REGISTRY="ghcr.io/${{ github.repository_owner }}"
-            IMAGE_PREFIX="${{ github.event.repository.name }}-"
+            REGISTRY="ghcr.io/${OWNER_LOWER}"
+            IMAGE_PREFIX="${REPO_LOWER}-"
           else
             # ECR: 123456789.dkr.ecr.region.amazonaws.com/repo/service:latest
             REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-            IMAGE_PREFIX="${{ github.event.repository.name }}/"
+            IMAGE_PREFIX="${REPO_LOWER}/"
           fi
 
           echo "registry=${REGISTRY}" >> $GITHUB_OUTPUT
