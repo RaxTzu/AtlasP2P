@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { AUTH_STORAGE_KEY } from './client';
+import { AUTH_STORAGE_KEY } from './constants';
 
 /**
  * Create Supabase client for server components and API routes

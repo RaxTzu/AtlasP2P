@@ -1,9 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { getFeatureFlags } from '@atlasp2p/config';
-
-// Consistent storage key across all clients (browser, middleware, server)
-// This ensures cookie names match regardless of which URL is used
-export const AUTH_STORAGE_KEY = 'atlasp2p-auth';
+import { AUTH_STORAGE_KEY } from './constants';
 
 export function createClient() {
   const featureFlags = getFeatureFlags();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/middleware';
-import { edgeConfig } from '@atlasp2p/config';
+import { edgeConfig } from '@atlasp2p/config/edge';
 
 /**
  * Middleware for authentication and authorization

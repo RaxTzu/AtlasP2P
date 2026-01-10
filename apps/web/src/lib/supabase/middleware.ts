@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_STORAGE_KEY } from './client';
+import { AUTH_STORAGE_KEY } from './constants';
 
 /**
  * Create Supabase client for middleware

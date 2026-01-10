@@ -12,6 +12,7 @@ import { initializeConfig } from '@atlasp2p/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; // Required for fs-based config loader
 
 // POST /api/alerts/test - Test notification delivery
 export async function POST(request: NextRequest) {

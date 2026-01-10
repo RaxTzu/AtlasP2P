@@ -16,15 +16,25 @@ const yaml = require('js-yaml');
 // Paths
 const ROOT_DIR = path.join(__dirname, '..');
 const CONFIG_PATH = path.join(ROOT_DIR, 'config', 'project.config.yaml');
+const CONFIG_EXAMPLE_PATH = path.join(ROOT_DIR, 'config', 'project.config.yaml.example');
 const OUTPUT_PATH = path.join(ROOT_DIR, 'packages', 'config', 'src', 'edge.ts');
 
-// Read and parse YAML config
+// Read and parse YAML config (with fallback to .example for CI/CD)
 function readConfig() {
+  let configPath = CONFIG_PATH;
+
+  // Try project.config.yaml first (forks & local dev)
+  if (!fs.existsSync(CONFIG_PATH)) {
+    console.log(`⚠ ${CONFIG_PATH} not found, falling back to .example`);
+    configPath = CONFIG_EXAMPLE_PATH;
+  }
+
   try {
-    const fileContents = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const fileContents = fs.readFileSync(configPath, 'utf8');
     return yaml.load(fileContents);
   } catch (error) {
-    console.error(`❌ Failed to read ${CONFIG_PATH}:`, error.message);
+    console.error(`❌ Failed to read config file:`, error.message);
+    console.error(`Tried paths: ${CONFIG_PATH}, ${CONFIG_EXAMPLE_PATH}`);
     process.exit(1);
   }
 }
@@ -64,9 +74,13 @@ export type EdgeConfig = typeof edgeConfig;
 function main() {
   console.log('🔧 Generating Edge runtime config...');
 
+  // Determine which config file exists
+  const usingExampleFallback = !fs.existsSync(CONFIG_PATH);
+  const actualConfigPath = usingExampleFallback ? CONFIG_EXAMPLE_PATH : CONFIG_PATH;
+
   // Read config
   const config = readConfig();
-  console.log(`✓ Read config from ${CONFIG_PATH}`);
+  console.log(`✓ Read config from ${actualConfigPath}`);
 
   // Generate TypeScript content
   const content = generateEdgeConfig(config);

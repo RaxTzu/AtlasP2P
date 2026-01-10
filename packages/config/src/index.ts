@@ -81,8 +81,10 @@ export * from './schema';
 // -------------------------------------------
 // Minimal config for Edge runtime (middleware)
 // Auto-generated from project.config.yaml
+// Import from '@atlasp2p/config/edge' to avoid bundling server code
 
-export * from './edge';
+// NOTE: Edge config NOT exported here to avoid bundling loader.ts
+// Import directly: import { edgeConfig } from '@atlasp2p/config/edge'
 
 export function calculateTier(
   isVerified: boolean,
