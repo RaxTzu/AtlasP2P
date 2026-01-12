@@ -305,17 +305,20 @@ jobs:
         if: steps.resolve.outputs.secrets_source != 'manual'
         run: |
           BUILD_ARGS=""
-          while IFS='=' read -r key value; do
-            [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
-            if [[ "$key" =~ ^NEXT_PUBLIC_ ]]; then
-              BUILD_ARGS="$BUILD_ARGS --build-arg $key=\"$value\""
-            fi
-          done < .env.full
+          if [ -f .env.full ]; then
+            while IFS='=' read -r key value; do
+              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+              if [[ "$key" =~ ^NEXT_PUBLIC_ ]]; then
+                BUILD_ARGS="$BUILD_ARGS --build-arg $key=\"$value\""
+              fi
+            done < .env.full
+            cp .env.full .env.production
+          else
+            touch .env.production
+          fi
           echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
-          cp .env.full .env.production
 
       - name: Inject registry configuration
-        if: steps.resolve.outputs.secrets_source != 'manual'
         run: |
           # Extract IMAGE_PREFIX from repository names for docker-compose compatibility
           REPO_WEB="${{ needs.detect-config.outputs.repository_web }}"
@@ -344,7 +347,6 @@ jobs:
           EOF
 
       - name: Upload artifacts
-        if: steps.resolve.outputs.secrets_source != 'manual'
         uses: actions/upload-artifact@v4
         with:
           name: environment
