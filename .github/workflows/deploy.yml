@@ -321,6 +321,9 @@ jobs:
 
       - name: Inject registry configuration
         run: |
+          # Ensure .env.production exists
+          touch .env.production
+
           # Extract IMAGE_PREFIX from repository names for docker-compose compatibility
           REPO_WEB="${{ needs.detect-config.outputs.repository_web }}"
 
@@ -336,7 +339,7 @@ jobs:
             REGISTRY="SET_BY_HOST_ECR_LOGIN"
           fi
 
-          cat >> .env.production << EOF
+          cat >> .env.production << 'EOFREGISTRY'
 
           # Docker Registry Configuration (injected by CI/CD)
           REGISTRY_TYPE=${{ needs.detect-config.outputs.registry_type }}
@@ -345,7 +348,11 @@ jobs:
           REGISTRY=${REGISTRY}
           IMAGE_PREFIX=${IMAGE_PREFIX}
           IMAGE_TAG=latest
-          EOF
+          EOFREGISTRY
+
+          # Verify file exists
+          ls -lh .env.production
+          echo "File size: $(wc -l < .env.production) lines"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
