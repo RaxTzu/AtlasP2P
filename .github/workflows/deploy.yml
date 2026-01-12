@@ -476,6 +476,7 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key docker-compose.yml docker-compose.prod.yml docker-compose.cloud-prod.yml Makefile \
             "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          scp -i ~/.ssh/deploy_key -r supabase "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
           if [ "$SECRETS_SOURCE" != "manual" ]; then
             scp -i ~/.ssh/deploy_key deployment.env "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
           fi
