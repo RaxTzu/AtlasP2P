@@ -319,13 +319,16 @@ jobs:
         if: steps.resolve.outputs.secrets_source != 'manual'
         run: |
           # Add registry vars for docker-compose on host
+          REPO_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          CHAIN_LOWER=$(echo "${{ needs.detect-config.outputs.chain }}" | tr '[:upper:]' '[:lower:]')
+
           if [ "${{ needs.detect-config.outputs.registry_type }}" = "ghcr" ]; then
             REGISTRY="ghcr.io/${{ github.repository_owner }}"
-            IMAGE_PREFIX="${{ github.event.repository.name }}-"
+            IMAGE_PREFIX="${REPO_LOWER}-"
           else
             # ECR URL pattern (actual registry set on host after ECR login)
             REGISTRY="SET_BY_HOST_ECR_LOGIN"
-            IMAGE_PREFIX="${{ github.event.repository.name }}/"
+            IMAGE_PREFIX="${CHAIN_LOWER}/nodes-map-"
           fi
 
           cat >> .env.production << EOF
