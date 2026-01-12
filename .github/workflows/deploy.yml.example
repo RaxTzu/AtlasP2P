@@ -491,11 +491,11 @@ jobs:
           ROLLBACK_ENABLED: ${{ needs.detect-config.outputs.rollback_enabled }}
           FORCE_ROLLBACK_TEST: ${{ inputs.force_rollback_test }}
         run: |
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'ENDSSH'
+          ssh -i ~/.ssh/deploy_key "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}" bash -s <<'ENDSSH'
             set -e
-            cd ${DEPLOY_PATH}
+            cd ${{ vars.DEPLOY_PATH }}
 
-            if [ "${BACKUP_ENABLED}" = "true" ]; then
+            if [ "${{ needs.detect-config.outputs.backup_enabled }}" = "true" ]; then
               mkdir -p backups
               docker compose exec -T db pg_dump -U postgres atlasp2p > "backups/db-$(date +%Y%m%d-%H%M%S).sql" 2>/dev/null || true
             fi
@@ -550,7 +550,7 @@ jobs:
                 # Try pull without auth first
                 if ! docker pull ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG} 2>/dev/null; then
                   echo "==> Public pull failed, using GitHub token for authentication..."
-                  echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
+                  echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
                 fi
               else
                 echo "==> Registry is private, authenticating with GitHub token..."
@@ -564,10 +564,10 @@ jobs:
             echo "==> Pulling Docker images..."
             docker compose pull
 
-            echo "==> Deploying with make target: ${MAKE_TARGET}"
-            make ${MAKE_TARGET}
+            echo "==> Deploying with make target: ${{ needs.detect-config.outputs.make_target }}"
+            make ${{ needs.detect-config.outputs.make_target }}
 
-            if [ "${FORCE_ROLLBACK_TEST}" != "true" ]; then
+            if [ "${{ inputs.force_rollback_test }}" != "true" ]; then
               for i in {1..10}; do
                 curl -sf http://localhost:4000/api/stats && break
                 sleep 3
