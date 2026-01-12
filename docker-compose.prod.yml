@@ -57,8 +57,8 @@ services:
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
-      # In production, browser calls same origin, proxied by Caddy/external proxy
-      - NEXT_PUBLIC_SUPABASE_URL=https://${DOMAIN:-localhost}/supabase
+      # Use API_EXTERNAL_URL from .env (supports both same-origin and separate subdomain)
+      - NEXT_PUBLIC_SUPABASE_URL=${API_EXTERNAL_URL:-https://${DOMAIN:-localhost}/supabase}
     restart: unless-stopped
 
   # Kong API Gateway
@@ -70,9 +70,9 @@ services:
   # Override auth for production URLs
   auth:
     environment:
-      API_EXTERNAL_URL: https://${DOMAIN:-localhost}/supabase
-      GOTRUE_SITE_URL: https://${DOMAIN:-localhost}
-      GOTRUE_URI_ALLOW_LIST: https://${DOMAIN:-localhost}
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-https://${DOMAIN:-localhost}/supabase}
+      GOTRUE_SITE_URL: ${SITE_URL:-https://${DOMAIN:-localhost}}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-https://${DOMAIN:-localhost}}
       # Use real SMTP in production
       GOTRUE_MAILER_AUTOCONFIRM: "false"
       GOTRUE_SMTP_HOST: ${SMTP_HOST}

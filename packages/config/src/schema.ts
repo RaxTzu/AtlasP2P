@@ -442,7 +442,10 @@ export const DeploymentRegistrySchema = z.object({
   }),
   public: z.boolean().optional().default(true),
   region: z.string().optional().default('us-east-1'),
-  imagePattern: z.string().optional(),
+  repositories: z.object({
+    web: z.string().min(1, 'Web repository name is required'),
+    crawler: z.string().min(1, 'Crawler repository name is required'),
+  }),
 });
 
 export const DeploymentCaddySchema = z.object({

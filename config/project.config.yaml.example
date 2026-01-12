@@ -576,12 +576,12 @@ deployment:
     # Ignored if type=ghcr
     region: us-east-1
 
-    # Image naming pattern (optional, uses defaults if not set)
-    # {repo} = GitHub repository name (owner/repo)
-    # {service} = web, crawler, etc.
-    # Default GHCR: ghcr.io/{repo}-{service}:latest
-    # Default ECR: {account}.dkr.ecr.{region}.amazonaws.com/{repo}/{service}:latest
-    # imagePattern: "custom-{service}:latest"
+    # Repository names for each service
+    # For GHCR: Use format "owner/repo-service" (e.g., "raxtzu/atlasp2p-web")
+    # For ECR: Use format "namespace/image" (e.g., "atlasp2p/nodes-map-web")
+    repositories:
+      web: raxtzu/atlasp2p-web
+      crawler: raxtzu/atlasp2p-crawler
 
   # Health checks and validation
   healthCheck:
