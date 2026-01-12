@@ -61,6 +61,12 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=https://${DOMAIN:-localhost}/supabase
     restart: unless-stopped
 
+  # Kong API Gateway
+  # Exposed when NOT using container Caddy (for host-based reverse proxy)
+  kong:
+    ports:
+      - "${KONG_PORT:-4020}:8000"  # Exposed for external reverse proxy
+
   # Override auth for production URLs
   auth:
     environment:
