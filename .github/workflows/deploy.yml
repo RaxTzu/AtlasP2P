@@ -235,8 +235,6 @@ jobs:
     if: always() && needs.detect-config.result == 'success' && (needs.auto-detect.result == 'success' || needs.auto-detect.result == 'skipped')
     runs-on: ubuntu-latest
     environment: ${{ vars.DEPLOYMENT_ENVIRONMENT || 'production' }}
-    outputs:
-      build_args: ${{ steps.extract.outputs.build_args }}
 
     steps:
       - uses: actions/checkout@v4
@@ -301,23 +299,15 @@ jobs:
           # Expand variables
           envsubst < .env.full > .env.tmp && mv .env.tmp .env.full
 
-      - name: Extract build args
-        id: extract
+      - name: Prepare deployment environment
         if: steps.resolve.outputs.secrets_source != 'manual'
         run: |
-          BUILD_ARGS=""
+          # Copy .env.full to deployment.env for Docker build and deployment
           if [ -f .env.full ]; then
-            while IFS='=' read -r key value; do
-              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
-              if [[ "$key" =~ ^NEXT_PUBLIC_ ]]; then
-                BUILD_ARGS="$BUILD_ARGS --build-arg $key=\"$value\""
-              fi
-            done < .env.full
             cp .env.full deployment.env
           else
             touch deployment.env
           fi
-          echo "build_args=$BUILD_ARGS" >> $GITHUB_OUTPUT
 
       - name: Inject registry configuration
         run: |
@@ -371,6 +361,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download environment for build
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        uses: actions/download-artifact@v4
+        with:
+          name: environment
+          path: .
+
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -422,7 +419,6 @@ jobs:
           push: true
           tags: ${{ steps.registry.outputs.web_image }}
           build-args: |
-            ${{ needs.prepare-env.outputs.build_args }}
             CACHEBUST=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
