@@ -90,6 +90,9 @@ services:
     container_name: atlasp2p-crawler
     env_file:
       - .env
+    environment:
+      # Prod mode: web listens on 3000
+      - WEB_PORT=3000
     volumes:
       - geoip-data:/app/data/geoip
     restart: unless-stopped
