@@ -159,8 +159,8 @@ services:
       # Docker-specific overrides
       - SUPABASE_URL=http://kong:8000
       - GEOIP_DB_PATH=/app/data/geoip
-      # Pass web port for API communication
-      - WEB_PORT=${WEB_PORT:-4000}
+      # Internal web port for Docker network communication (web container listens on 3000)
+      - WEB_PORT=3000
     volumes:
       # Persist GeoIP databases
       - geoip-data:/app/data/geoip
