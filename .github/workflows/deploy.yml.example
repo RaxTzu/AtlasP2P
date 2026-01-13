@@ -112,13 +112,25 @@ jobs:
           BACKUP_ENABLED=$(yq '.deployment.backup.enabled' "$CONFIG_FILE")
           HEALTH_CHECK_ENABLED=$(yq '.deployment.healthCheck.enabled' "$CONFIG_FILE")
 
-          # Registry configuration - use GitHub environment variables (reliable, no yq)
-          # These MUST be set in GitHub Settings → Environments → Production → Variables
-          REGISTRY_TYPE="${{ vars.REGISTRY_TYPE || 'ecr' }}"
-          REGISTRY_PUBLIC="${{ vars.REGISTRY_PUBLIC || 'false' }}"
-          REGISTRY_REGION="${{ vars.AWS_REGION || 'us-west-2' }}"
-          REPOSITORY_WEB="${{ vars.ECR_REPOSITORY_WEB || 'dingocoin/nodes-map-web' }}"
-          REPOSITORY_CRAWLER="${{ vars.ECR_REPOSITORY_CRAWLER || 'dingocoin/nodes-map-crawler' }}"
+          # Registry configuration - GENERIC variable names work with ANY registry
+          # Priority: GitHub environment variables → project.config.yaml → defaults
+          REGISTRY_TYPE="${{ vars.REGISTRY_TYPE }}"
+          REGISTRY_PUBLIC="${{ vars.REGISTRY_PUBLIC }}"
+          REGISTRY_REGION="${{ vars.REGISTRY_REGION }}"
+          REPOSITORY_WEB="${{ vars.REPOSITORY_WEB }}"
+          REPOSITORY_CRAWLER="${{ vars.REPOSITORY_CRAWLER }}"
+
+          # Fallback to YAML if GitHub vars not set
+          [ -z "$REGISTRY_TYPE" ] && REGISTRY_TYPE=$(yq '.deployment.registry.type' "$CONFIG_FILE")
+          [ -z "$REGISTRY_PUBLIC" ] && REGISTRY_PUBLIC=$(yq '.deployment.registry.public' "$CONFIG_FILE")
+          [ -z "$REGISTRY_REGION" ] && REGISTRY_REGION=$(yq '.deployment.registry.region' "$CONFIG_FILE")
+          [ -z "$REPOSITORY_WEB" ] && REPOSITORY_WEB=$(yq '.deployment.registry.repositories.web' "$CONFIG_FILE")
+          [ -z "$REPOSITORY_CRAWLER" ] && REPOSITORY_CRAWLER=$(yq '.deployment.registry.repositories.crawler' "$CONFIG_FILE")
+
+          # Final defaults if both GitHub vars and YAML are empty/null
+          [ "$REGISTRY_TYPE" = "null" ] || [ -z "$REGISTRY_TYPE" ] && REGISTRY_TYPE="ghcr"
+          [ "$REGISTRY_PUBLIC" = "null" ] || [ -z "$REGISTRY_PUBLIC" ] && REGISTRY_PUBLIC="true"
+          [ "$REGISTRY_REGION" = "null" ] || [ -z "$REGISTRY_REGION" ] && REGISTRY_REGION="us-east-1"
 
           # Apply overrides from workflow inputs (safe - enum restricted)
           [ -n "$OVERRIDE_MODE" ] && DEPLOYMENT_MODE="$OVERRIDE_MODE"

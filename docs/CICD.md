@@ -83,13 +83,13 @@ DEPLOY_HOST=nodes.example.com   # Server IP or domain
 DEPLOY_PATH=/opt/atlasp2p       # Deployment directory on server
 ```
 
-**Registry Variables (for ECR):**
+**Registry Variables (GENERIC - work with any registry):**
 ```bash
 REGISTRY_TYPE=ecr                        # Registry type: ecr or ghcr
 REGISTRY_PUBLIC=false                    # Whether registry is public (ghcr only)
-AWS_REGION=us-west-2                     # AWS region for ECR
-ECR_REPOSITORY_WEB=dingocoin/nodes-map-web        # ECR repository name for web
-ECR_REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler # ECR repository name for crawler
+REGISTRY_REGION=us-west-2                # Region (ECR: AWS region, GHCR: ignored)
+REPOSITORY_WEB=dingocoin/nodes-map-web        # Repository name for web
+REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler # Repository name for crawler
 ```
 
 **Note:** Registry variables can also be defined in `project.config.yaml`, but GitHub environment variables take precedence. Using GitHub variables is recommended for reliability and matches the Dingocoin-Ecosystem deployment pattern.
@@ -176,7 +176,7 @@ AtlasP2P supports **three secrets management methods**:
    ```
 3. Configure GitHub variables:
    ```bash
-   AWS_REGION=us-east-1
+   REGISTRY_REGION=us-east-1
    ```
 4. Update `project.config.yaml`:
    ```yaml
@@ -297,9 +297,9 @@ ghcr.io/your-org/atlasp2p-crawler:latest
 Set these in GitHub Settings → Environments → Production → Variables:
 ```bash
 REGISTRY_TYPE=ecr                              # Registry type
-AWS_REGION=us-west-2                           # AWS region
-ECR_REPOSITORY_WEB=dingocoin/nodes-map-web     # Repository name for web
-ECR_REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler  # Repository name for crawler
+REGISTRY_REGION=us-west-2                      # AWS region
+REPOSITORY_WEB=dingocoin/nodes-map-web     # Repository name for web
+REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler  # Repository name for crawler
 ```
 
 Set these in GitHub Settings → Secrets:
@@ -380,9 +380,9 @@ aws configure
 2. Add/update these variables:
    ```bash
    REGISTRY_TYPE=ecr
-   AWS_REGION=us-west-2
-   ECR_REPOSITORY_WEB=dingocoin/nodes-map-web
-   ECR_REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler
+   REGISTRY_REGION=us-west-2
+   REPOSITORY_WEB=dingocoin/nodes-map-web
+   REPOSITORY_CRAWLER=dingocoin/nodes-map-crawler
    ```
 3. Add AWS credentials to Secrets:
    ```bash
@@ -509,9 +509,9 @@ This happens when registry configuration isn't being read correctly.
 ```bash
 # GitHub → Settings → Environments → Production → Variables
 REGISTRY_TYPE=ecr
-AWS_REGION=us-west-2
-ECR_REPOSITORY_WEB=your-org/nodes-map-web
-ECR_REPOSITORY_CRAWLER=your-org/nodes-map-crawler
+REGISTRY_REGION=us-west-2
+REPOSITORY_WEB=your-org/nodes-map-web
+REPOSITORY_CRAWLER=your-org/nodes-map-crawler
 ```
 
 **Solution 2: Debug workflow**
