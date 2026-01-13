@@ -634,8 +634,13 @@ jobs:
 
             echo ""
             echo "==> Pulling Docker images..."
-            if ! docker compose pull; then
-              echo "ERROR: Failed to pull Docker images"
+            echo "Pulling web and crawler images from \${REGISTRY}..."
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}web:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull web image"
+              exit 1
+            fi
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}crawler:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull crawler image"
               exit 1
             fi
             echo "✓ Docker images pulled successfully"
