@@ -281,7 +281,7 @@ prod-docker: ## Production - Self-hosted (full stack + Caddy SSL)
 		echo "$(RED)Error: DOMAIN not set in .env$(RESET)"; \
 		exit 1; \
 	fi
-	@docker compose $(COMPOSE_PROD_DOCKER) --profile with-caddy up -d
+	@docker compose $(COMPOSE_PROD_DOCKER) --profile with-caddy up -d --force-recreate --no-build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
@@ -292,7 +292,7 @@ prod-docker: ## Production - Self-hosted (full stack + Caddy SSL)
 
 prod-docker-no-caddy: ## Production - Self-hosted WITHOUT container Caddy (use host proxy)
 	@echo "$(CYAN)Starting production (self-hosted, no container Caddy)...$(RESET)"
-	@docker compose $(COMPOSE_PROD_DOCKER) up -d
+	@docker compose $(COMPOSE_PROD_DOCKER) up -d --force-recreate --no-build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
@@ -308,7 +308,7 @@ prod-cloud: ## Production - Cloud DB + Docker app + Caddy SSL
 		echo "$(RED)Error: DOMAIN not set in .env$(RESET)"; \
 		exit 1; \
 	fi
-	@docker compose $(COMPOSE_PROD_CLOUD) --profile with-caddy up -d
+	@docker compose $(COMPOSE_PROD_CLOUD) --profile with-caddy up -d --force-recreate --no-build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
@@ -319,7 +319,7 @@ prod-cloud: ## Production - Cloud DB + Docker app + Caddy SSL
 
 prod-cloud-no-caddy: ## Production - Cloud DB WITHOUT container Caddy (use host proxy)
 	@echo "$(CYAN)Starting production (cloud mode, no container Caddy)...$(RESET)"
-	@docker compose $(COMPOSE_PROD_CLOUD) up -d
+	@docker compose $(COMPOSE_PROD_CLOUD) up -d --force-recreate --no-build
 	@echo ""
 	@echo "$(GREEN)╔═══════════════════════════════════════╗$(RESET)"
 	@echo "$(GREEN)║       PRODUCTION READY                ║$(RESET)"
@@ -338,8 +338,8 @@ prod-logs: ## Show production logs
 
 prod-restart: ## Restart production
 	@echo "$(CYAN)Restarting production...$(RESET)"
-	@docker compose $(COMPOSE_PROD_DOCKER) up -d --force-recreate 2>/dev/null || \
-		docker compose $(COMPOSE_PROD_CLOUD) up -d --force-recreate
+	@docker compose $(COMPOSE_PROD_DOCKER) up -d --force-recreate --no-build 2>/dev/null || \
+		docker compose $(COMPOSE_PROD_CLOUD) up -d --force-recreate --no-build
 	@echo "$(GREEN)✓ Production restarted$(RESET)"
 
 # ===========================================

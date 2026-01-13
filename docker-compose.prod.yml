@@ -48,7 +48,9 @@ services:
   # When with-caddy profile: no exposed ports (Caddy proxies)
   # When no-caddy: expose port 4000 for external reverse proxy
   web:
-    build: null  # Remove build directive from base docker-compose.yml
+    # IMPORTANT: Override with image, no build in production
+    # Setting build: null doesn't work - must omit build entirely
+    # and re-declare the service to override base config
     image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG:-latest}
     container_name: atlasp2p-web
     env_file:
@@ -58,8 +60,14 @@ services:
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
+      - SUPABASE_INTERNAL_URL=http://kong:8000
       # Use API_EXTERNAL_URL from .env (supports both same-origin and separate subdomain)
       - NEXT_PUBLIC_SUPABASE_URL=${API_EXTERNAL_URL:-https://${DOMAIN:-localhost}/supabase}
+    volumes:
+      - avatar-storage:/app/public/avatars
+      - web-next-cache:/app/apps/web/.next/cache
+    depends_on:
+      - kong
     restart: unless-stopped
 
   # Kong API Gateway
@@ -85,17 +93,34 @@ services:
   # Uses pre-built image from CI/CD (GHCR or ECR)
   # Crawler is a CORE service and runs by default
   crawler:
-    build: null  # Remove build directive from base docker-compose.yml
+    # IMPORTANT: Override with image, no build in production
+    # Setting build: null doesn't work - must omit build entirely
+    # and re-declare the service to override base config
     image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG:-latest}
     container_name: atlasp2p-crawler
     env_file:
       - .env
     environment:
+      - SUPABASE_URL=http://kong:8000
+      - GEOIP_DB_PATH=/app/data/geoip
       # Prod mode: web listens on 3000
       - WEB_PORT=3000
     volumes:
       - geoip-data:/app/data/geoip
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+      kong:
+        condition: service_started
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   geoip-data:
