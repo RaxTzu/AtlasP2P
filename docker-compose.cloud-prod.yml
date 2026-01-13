@@ -43,21 +43,55 @@ services:
   # When with-caddy: no exposed ports (Caddy proxies)
   # When no-caddy: expose port for external reverse proxy
   web:
+    # IMPORTANT: Override with image, no build in production
+    # Setting build: null doesn't work - must omit build entirely
+    # and re-declare the service to override base config
     image: ${REGISTRY}/${IMAGE_PREFIX}web:${IMAGE_TAG:-latest}
     container_name: atlasp2p-web
     ports:
       - "${WEB_PORT:-4000}:3000"  # Exposed when NOT using Caddy
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - WEB_TARGET=production
+      - SUPABASE_INTERNAL_URL=${NEXT_PUBLIC_SUPABASE_URL}
+    volumes:
+      - avatar-storage:/app/public/avatars
+      - web-next-cache:/app/apps/web/.next/cache
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Crawler uses pre-built image
   crawler:
+    # IMPORTANT: Override with image, no build in production
+    # Setting build: null doesn't work - must omit build entirely
+    # and re-declare the service to override base config
     image: ${REGISTRY}/${IMAGE_PREFIX}crawler:${IMAGE_TAG:-latest}
     container_name: atlasp2p-crawler
+    env_file:
+      - .env
+    environment:
+      - SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - GEOIP_DB_PATH=/app/data/geoip
+    volumes:
+      - geoip-data:/app/data/geoip
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
+  avatar-storage:
+  web-next-cache:
+  geoip-data:
   atlasp2p_caddy-data:
   atlasp2p_caddy-config:
