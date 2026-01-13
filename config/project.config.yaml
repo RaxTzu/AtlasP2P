@@ -587,4 +587,4 @@ deployment:
 assets:
   logoPath: /logos/dingocoin.png
   faviconPath: /logos/favicon.ico
-  ogImagePath: /logos/dingocoin-og.png
+  ogImagePath: /logos/dingocoin.png
