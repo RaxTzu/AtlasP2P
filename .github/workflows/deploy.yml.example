@@ -64,7 +64,7 @@ jobs:
 
           # Auto-detect secrets source if set to "auto"
           if [ "$SECRETS_SOURCE" = "auto" ]; then
-            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ vars.AWS_ACCESS_KEY_ID }}" ]; then
               echo "Auto-detected: AWS SSM Parameter Store"
               SECRETS_SOURCE="aws-ssm"
             elif [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
@@ -103,7 +103,7 @@ jobs:
     steps:
       - name: Fetch from AWS SSM
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
         run: |
@@ -232,7 +232,8 @@ jobs:
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    needs: detect-config
+    needs: [detect-config, prepare-env-ssm, prepare-env-github]
+    if: always() && needs.detect-config.result == 'success'
     permissions:
       contents: read
       packages: write
@@ -241,6 +242,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Download env artifact from prepare-env jobs (if exists)
+      - name: Download deployment.env artifact
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-env
+          path: .
+        continue-on-error: true
+
+      - name: Extract build-time environment variables
+        id: build-env
+        run: |
+          if [ -f deployment.env ]; then
+            echo "Using deployment.env from SSM/GitHub Secrets"
+            # Extract NEXT_PUBLIC_* variables
+            export $(grep "^NEXT_PUBLIC_" deployment.env | xargs)
+          else
+            echo "Using GitHub Secrets directly (manual mode)"
+            export NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+            export NEXT_PUBLIC_TURNSTILE_SITE_KEY="${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}"
+            export NEXT_PUBLIC_ENABLE_TURNSTILE="${{ secrets.NEXT_PUBLIC_ENABLE_TURNSTILE }}"
+            export NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS="${{ secrets.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}"
+          fi
+
+          # Output for next steps
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS" >> $GITHUB_OUTPUT
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -258,8 +291,11 @@ jobs:
       - name: Build packages
         run: pnpm build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.build-env.outputs.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.build-env.outputs.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_ENABLE_TURNSTILE: ${{ steps.build-env.outputs.NEXT_PUBLIC_ENABLE_TURNSTILE }}
+          NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS: ${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -269,7 +305,7 @@ jobs:
         if: needs.detect-config.outputs.registry_type == 'ecr'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
@@ -356,15 +392,15 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Create database backup
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'BACKUP_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'BACKUP_SCRIPT'
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ vars.DEPLOY_PATH }}
 
             BACKUP_DIR="backups"
             mkdir -p "$BACKUP_DIR"
@@ -406,9 +442,9 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       # Download env artifact if using SSM or GitHub Secrets
       - name: Download deployment.env artifact
@@ -422,16 +458,16 @@ jobs:
       - name: Copy .env to server
         if: needs.detect-config.outputs.secrets_source != 'manual'
         run: |
-          scp -i ~/.ssh/deploy_key deployment.env ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/.env
+          scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:${{ vars.DEPLOY_PATH }}/.env
           echo "Copied deployment.env to server"
 
       - name: Deploy application
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} \
             "DEPLOYMENT_MODE=${{ needs.detect-config.outputs.deployment_mode }}" \
             bash -s << 'DEPLOY_SCRIPT'
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ vars.DEPLOY_PATH }}
 
             echo "Loading environment configuration..."
             if [ -f .env ]; then
@@ -500,15 +536,15 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Run health checks
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'HEALTH_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'HEALTH_SCRIPT'
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ vars.DEPLOY_PATH }}
 
             # Load health check config from .env
             if [ -f .env ]; then
@@ -565,15 +601,15 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
       - name: Rollback to previous state
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'ROLLBACK_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} << 'ROLLBACK_SCRIPT'
             set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ vars.DEPLOY_PATH }}
 
             echo "====================================="
             echo "DEPLOYMENT FAILED - INITIATING ROLLBACK"
