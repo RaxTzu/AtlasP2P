@@ -520,7 +520,7 @@ jobs:
           ROLLBACK_ENABLED: ${{ needs.detect-config.outputs.rollback_enabled }}
           FORCE_ROLLBACK_TEST: ${{ inputs.force_rollback_test }}
         run: |
-          ssh -i ~/.ssh/deploy_key "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" sudo -u deployment bash -s << ENDSSH
+          ssh -i ~/.ssh/deploy_key "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" sudo -u deployment bash -s <<'ENDSSH'
             set -e
             set -o pipefail
 
