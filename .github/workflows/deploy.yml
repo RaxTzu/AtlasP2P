@@ -507,78 +507,185 @@ jobs:
             scp -i ~/.ssh/deploy_key deployment.env "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
           fi
 
-      - name: Backup Database
-        if: needs.detect-config.outputs.backup_enabled == 'true'
+      - name: Deploy
+        env:
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          MAKE_TARGET: ${{ needs.detect-config.outputs.make_target }}
+          REGISTRY: ${{ vars.REGISTRY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          BACKUP_ENABLED: ${{ needs.detect-config.outputs.backup_enabled }}
+          ROLLBACK_ENABLED: ${{ needs.detect-config.outputs.rollback_enabled }}
+          FORCE_ROLLBACK_TEST: ${{ inputs.force_rollback_test }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.SSH_USER }}@${{ vars.SSH_HOST }} << 'BACKUP_SCRIPT'
+          ssh -i ~/.ssh/deploy_key "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" bash -s << ENDSSH
             set -e
-            cd ${{ vars.DEPLOY_PATH }}
-
-            echo "==> Creating database backup..."
-            mkdir -p backups
-            BACKUP_FILE="backups/db-$(date +%Y%m%d-%H%M%S).sql"
-
-            if docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p 2>/dev/null; then
-              docker compose exec -T db pg_dump -U postgres atlasp2p > "${BACKUP_FILE}" 2>/dev/null && \
-                echo "✓ Backup created: ${BACKUP_FILE}" || \
-                echo "⚠ Backup failed (non-fatal)"
-            else
-              echo "⚠ Database not found, skipping backup"
-            fi
-          BACKUP_SCRIPT
-
-      - name: Deploy to Production
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.SSH_USER }}@${{ vars.SSH_HOST }} << 'DEPLOY_SCRIPT'
-            set -e
-            cd ${{ vars.DEPLOY_PATH }}
+            set -o pipefail
 
             echo "======================================"
-            echo "DEPLOYMENT STARTED: $(date)"
+            echo "DEPLOYMENT STARTED: \$(date)"
             echo "======================================"
 
-            # Load environment
-            set -a
-            source .env
-            set +a
+            cd ${{ vars.DEPLOY_PATH }}
+            echo "Working directory: \$(pwd)"
 
-            # Login to ECR
-            echo "==> Authenticating to Amazon ECR..."
-            aws ecr get-login-password --region ${REGISTRY_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
+            if [ "${{ needs.detect-config.outputs.backup_enabled }}" = "true" ]; then
+              echo ""
+              echo "==> Attempting database backup..."
+              mkdir -p backups
+              BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
 
-            # Pull latest images
-            echo "==> Pulling Docker images..."
-            docker compose -f docker-compose.prod.yml pull
+              set +e
+              docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p 2>/dev/null
+              DB_EXISTS=\$?
+              set -e
 
-            # Start/update all services
-            echo "==> Starting services..."
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
+              if [ \$DB_EXISTS -eq 0 ]; then
+                set +e
+                docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}" 2>/dev/null
+                BACKUP_STATUS=\$?
+                set -e
 
-            # Wait for services
-            sleep 15
-
-            # Health check
-            echo "==> Running health check..."
-            for i in {1..10}; do
-              if curl -sf http://localhost:4000/api/stats > /dev/null; then
-                echo "✓ Health check passed"
-                break
+                if [ \$BACKUP_STATUS -eq 0 ]; then
+                  echo "✓ Backup created: \${BACKUP_FILE} (\$(wc -l < \${BACKUP_FILE}) lines)"
+                else
+                  echo "⚠ Backup failed (non-fatal)"
+                fi
+              else
+                echo "⚠ Database not found or not ready, skipping backup (non-fatal)"
               fi
-              [ $i -eq 10 ] && echo "⚠ Health check failed" && exit 1
-              sleep 3
-            done
+            fi
 
-            # Cleanup
+            echo ""
+            echo "==> Loading registry configuration..."
+
+            if [ ! -f .env ]; then
+              echo "ERROR: .env file not found in \$(pwd)"
+              echo "Files in directory:"
+              ls -la
+              exit 1
+            fi
+
+            if ! source .env; then
+              echo "ERROR: Failed to source .env file"
+              echo ".env contents:"
+              head -20 .env
+              exit 1
+            fi
+
+            REGISTRY_TYPE=\${REGISTRY_TYPE:-ghcr}
+            REGISTRY_PUBLIC=\${REGISTRY_PUBLIC:-true}
+            REGISTRY_REGION=\${REGISTRY_REGION:-us-east-1}
+            IMAGE_PREFIX=\${IMAGE_PREFIX}
+            IMAGE_TAG=\${IMAGE_TAG:-latest}
+
+            echo "Registry Type: \${REGISTRY_TYPE}"
+            echo "Registry: \${REGISTRY}"
+            echo "Image Prefix: \${IMAGE_PREFIX}"
+            echo "Image Tag: \${IMAGE_TAG}"
+
+            echo ""
+            if [ "\$REGISTRY_TYPE" = "ecr" ]; then
+              echo "==> Authenticating to Amazon ECR..."
+
+              if command -v aws &> /dev/null; then
+                echo "Using host AWS CLI"
+                if ! aws ecr get-login-password --region \${REGISTRY_REGION} | docker login --username AWS --password-stdin \${REGISTRY}; then
+                  echo "ERROR: ECR authentication failed"
+                  exit 1
+                fi
+              elif [ -n "\${AWS_ACCESS_KEY_ID}" ] && [ -n "\${AWS_SECRET_ACCESS_KEY}" ]; then
+                echo "Using AWS credentials from .env"
+                export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=\${REGISTRY_REGION}
+                if ! aws ecr get-login-password --region \${REGISTRY_REGION} | docker login --username AWS --password-stdin \${REGISTRY}; then
+                  echo "ERROR: ECR authentication failed"
+                  exit 1
+                fi
+              else
+                echo "ERROR: No AWS CLI or credentials available"
+                exit 1
+              fi
+              echo "✓ ECR authentication successful"
+
+            elif [ "\$REGISTRY_TYPE" = "ghcr" ]; then
+              echo "==> Authenticating to GitHub Container Registry..."
+              if [ "\$REGISTRY_PUBLIC" = "true" ]; then
+                echo "Registry is public, attempting pull without auth first..."
+                if ! docker pull \${REGISTRY}/\${IMAGE_PREFIX}web:\${IMAGE_TAG}; then
+                  echo "Public pull failed, authenticating with GitHub token..."
+                  if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+                    echo "ERROR: GHCR authentication failed"
+                    exit 1
+                  fi
+                fi
+              else
+                echo "Registry is private, authenticating with GitHub token..."
+                if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+                  echo "ERROR: GHCR authentication failed"
+                  exit 1
+                fi
+              fi
+              echo "✓ GHCR authentication successful"
+            else
+              echo "ERROR: Unknown registry type: \${REGISTRY_TYPE}"
+              exit 1
+            fi
+
+            echo ""
+            echo "==> Pulling Docker images..."
+            echo "Pulling web and crawler images from \${REGISTRY}..."
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}web:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull web image"
+              exit 1
+            fi
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}crawler:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull crawler image"
+              exit 1
+            fi
+            echo "✓ Docker images pulled successfully"
+
+            echo ""
+            echo "==> Deploying with make target: ${{ needs.detect-config.outputs.make_target }}"
+            if ! make ${{ needs.detect-config.outputs.make_target }}; then
+              echo "ERROR: Deployment failed (make command failed)"
+              exit 1
+            fi
+            echo "✓ Deployment completed"
+
+            echo ""
+            echo "==> Checking container status..."
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep atlasp2p || true
+
+            if [ "${{ inputs.force_rollback_test }}" != "true" ]; then
+              echo ""
+              echo "==> Running health check..."
+              for i in {1..10}; do
+                if curl -sf http://localhost:4000/api/stats > /dev/null; then
+                  echo "✓ Health check passed (attempt \$i)"
+                  break
+                fi
+                echo "Health check failed (attempt \$i/10), retrying..."
+                sleep 3
+                if [ \$i -eq 10 ]; then
+                  echo "ERROR: Health check failed after 10 attempts"
+                  echo "Container logs:"
+                  docker logs atlasp2p-web --tail 50 2>&1 || true
+                  exit 1
+                fi
+              done
+            fi
+
+            echo ""
             echo "==> Cleaning up old images..."
-            docker image prune -af --filter "until=24h" || true
+            docker image prune -af --filter "until=24h" || echo "WARNING: Image cleanup failed (non-fatal)"
 
-            # Show status
-            docker compose -f docker-compose.prod.yml ps
-
+            echo ""
             echo "======================================"
-            echo "DEPLOYMENT SUCCESSFUL: $(date)"
+            echo "DEPLOYMENT SUCCESSFUL: \$(date)"
             echo "======================================"
-          DEPLOY_SCRIPT
+          ENDSSH
 
       - name: Cleanup
         if: always()
