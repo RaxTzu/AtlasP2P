@@ -9,7 +9,7 @@ import type { ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // @ts-ignore - supercluster doesn't have types but works fine
 import Supercluster from 'supercluster';
-import { Sun, Map as MapIcon, Moon } from 'lucide-react';
+import { Sun, Map as MapIcon, Moon, ChevronDown, Layers } from 'lucide-react';
 import { useNodes } from '@/hooks/useNodes';
 import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig } from '@/config';
 import { getTierColor, getTierIcon } from '@/lib/theme-colors';
@@ -120,6 +120,7 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
   const theme = getThemeConfig();
 
   const [tileStyle, setTileStyle] = useState(defaultTileStyle);
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // View state for map
@@ -636,40 +637,64 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Map Style Switcher - Bottom Right, above zoom controls (Desktop only) */}
-      <div className="hidden lg:block absolute bottom-36 right-4 z-[40] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-2 border border-border">
-        <div
-          className="text-xs font-medium text-muted-foreground px-1 mb-1.5"
-          id="map-style-label"
-        >
-          Map Style
-        </div>
-        <div
-          className="flex gap-1"
-          role="group"
-          aria-labelledby="map-style-label"
-        >
-          {tileStyles.map((style) => {
-            const IconComponent = style.icon ? THEME_ICONS[style.icon] : null;
-            return (
-              <button
-                key={style.id}
-                type="button"
-                onClick={() => setTileStyle(style.id)}
-                aria-label={`Map Style: ${style.name}`}
-                aria-current={tileStyle === style.id ? 'true' : undefined}
-                title={style.description || `Switch to ${style.name} view`}
-                className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary flex items-center gap-1.5 ${
-                  tileStyle === style.id
-                    ? 'bg-primary text-white shadow-sm font-semibold'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {IconComponent && <IconComponent className="h-3.5 w-3.5" />}
-                <span>{style.name}</span>
-              </button>
-            );
-          })}
+      {/* Map Style Dropdown - Bottom Right, above zoom controls (Desktop only) */}
+      <div className="hidden lg:block absolute bottom-36 right-4 z-[40]">
+        <div className="relative">
+          {/* Dropdown trigger button */}
+          <button
+            onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
+            className="flex items-center gap-2 px-3 py-2 bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border hover:bg-card transition-colors"
+            aria-expanded={isStyleDropdownOpen}
+            aria-haspopup="listbox"
+          >
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {tileStyles.find(s => s.id === tileStyle)?.name || 'Style'}
+            </span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isStyleDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Dropdown menu */}
+          {isStyleDropdownOpen && (
+            <>
+              {/* Backdrop to close dropdown */}
+              <div
+                className="fixed inset-0 z-[-1]"
+                onClick={() => setIsStyleDropdownOpen(false)}
+              />
+              <div className="absolute bottom-full right-0 mb-2 w-44 bg-card/95 backdrop-blur-xl rounded-lg shadow-xl border border-border overflow-hidden">
+                <div className="py-1">
+                  {tileStyles.map((style) => {
+                    const IconComponent = style.icon ? THEME_ICONS[style.icon] : null;
+                    const isSelected = tileStyle === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        type="button"
+                        onClick={() => {
+                          setTileStyle(style.id);
+                          setIsStyleDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
+                          isSelected
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-foreground hover:bg-muted'
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        {IconComponent && <IconComponent className="h-4 w-4" />}
+                        <span className="flex-1">{style.name}</span>
+                        {isSelected && (
+                          <span className="text-primary">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
