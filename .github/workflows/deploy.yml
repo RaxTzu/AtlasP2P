@@ -454,7 +454,7 @@ jobs:
             BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql"
 
             echo "Creating database backup: $BACKUP_FILE"
-            docker compose -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
 
             # Verify backup was created
             if [ ! -s "$BACKUP_FILE" ]; then
@@ -524,14 +524,15 @@ jobs:
               echo "Warning: .env not found (manual mode)"
             fi
 
-            # Determine compose file based on deployment mode
+            # Determine compose files based on deployment mode
+            # Note: prod files are OVERRIDES that require the base docker-compose.yml
             DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-self-hosted-docker}"
             if [ "$DEPLOYMENT_MODE" = "self-hosted-cloud" ]; then
-              COMPOSE_FILE="docker-compose.cloud-prod.yml"
+              COMPOSE_FILES="-f docker-compose.yml -f docker-compose.cloud-prod.yml"
             else
-              COMPOSE_FILE="docker-compose.prod.yml"
+              COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
             fi
-            echo "Using compose file: $COMPOSE_FILE"
+            echo "Using compose files: $COMPOSE_FILES"
 
             # Authenticate to registry
             if [ "$REGISTRY_TYPE" = "ecr" ]; then
@@ -546,18 +547,18 @@ jobs:
 
             # Pull latest images
             echo "Pulling latest images..."
-            docker compose -f "$COMPOSE_FILE" pull
+            docker compose $COMPOSE_FILES pull
 
             # Start services
             echo "Starting services..."
-            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+            docker compose $COMPOSE_FILES up -d --remove-orphans
 
             # Wait for containers to start
             sleep 5
 
             # Verify containers are running
             echo "Verifying containers..."
-            docker compose -f "$COMPOSE_FILE" ps
+            docker compose $COMPOSE_FILES ps
 
             # Cleanup old images
             echo "Cleaning up old images..."
@@ -672,24 +673,24 @@ jobs:
               echo "Restoring database from: $LATEST_BACKUP"
 
               # Stop containers to prevent writes during restore
-              docker compose -f docker-compose.prod.yml stop web crawler
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml stop web crawler
 
               # Restore database
-              docker compose -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
 
               echo "Database restored successfully"
             fi
 
             # Restart all containers (will use previous images since pull failed/was not done)
             echo "Restarting containers..."
-            docker compose -f docker-compose.prod.yml restart
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml restart
 
             # Wait for containers
             sleep 5
 
             # Verify containers are running
             echo "Container status:"
-            docker compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
             echo "====================================="
             echo "ROLLBACK COMPLETE"
