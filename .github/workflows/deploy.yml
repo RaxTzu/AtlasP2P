@@ -122,6 +122,20 @@ jobs:
 
           echo "Successfully fetched $(wc -l < deployment.env) lines from SSM"
 
+          # Inject registry configuration from GitHub Variables
+          echo "" >> deployment.env
+          echo "# Registry Configuration (injected by CI/CD)" >> deployment.env
+          echo "REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }}" >> deployment.env
+          echo "ECR_REGISTRY=${{ vars.REGISTRY }}" >> deployment.env
+          echo "REGISTRY=${{ vars.REGISTRY }}" >> deployment.env
+          echo "AWS_REGION=${{ vars.AWS_REGION }}" >> deployment.env
+          echo "AWS_ACCESS_KEY_ID=${{ vars.AWS_ACCESS_KEY_ID }}" >> deployment.env
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> deployment.env
+          echo "IMAGE_PREFIX=" >> deployment.env
+          echo "IMAGE_TAG=latest" >> deployment.env
+
+          echo "Injected registry configuration (REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }})"
+
       - name: Upload env artifact
         uses: actions/upload-artifact@v4
         with:
@@ -471,7 +485,9 @@ jobs:
 
             echo "Loading environment configuration..."
             if [ -f .env ]; then
+              set -a  # Auto-export all variables
               source .env
+              set +a
               echo "Environment loaded successfully"
             else
               echo "Warning: .env not found (manual mode)"
