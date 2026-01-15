@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // Output standalone server to bypass Next.js 16 static pre-rendering bug
   output: 'standalone',
 
+  // Include WASM files that Next.js standalone doesn't automatically trace
+  outputFileTracingIncludes: {
+    '/api/verify': ['./node_modules/tiny-secp256k1/**/*'],
+    '/api/verify/dns-check': ['./node_modules/tiny-secp256k1/**/*'],
+  },
+
   // Transpile workspace packages and CommonJS dependencies
   transpilePackages: ['@atlasp2p/config', '@atlasp2p/types', 'bitcoinjs-message'],
 

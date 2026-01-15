@@ -636,8 +636,8 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Map Style Switcher - Bottom Left (Desktop only - hidden when bottom sheet is visible) */}
-      <div className="hidden lg:block absolute bottom-20 left-4 z-[1000] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-3 border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
+      {/* Map Style Switcher - Bottom Left, after stats panel (Desktop only) */}
+      <div className="hidden lg:block absolute bottom-4 left-[21.5rem] z-[40] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-3 border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
         <div
           className="text-sm font-semibold text-muted-foreground px-0 py-2 mb-2"
           id="map-style-label"
@@ -697,7 +697,7 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
         pitchWithRotate={false}
         touchPitch={false}
       >
-        <NavigationControl position="bottom-left" showCompass={false} />
+        <NavigationControl position="bottom-right" showCompass={false} />
 
         {/* Cluster Markers */}
         {clusterFeatures.map((clusterFeature) => {
