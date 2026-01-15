@@ -123,6 +123,10 @@ jobs:
           echo "Successfully fetched $(wc -l < deployment.env) lines from SSM"
 
           # Inject registry configuration from GitHub Variables
+          # IMAGE_PREFIX derived from REPOSITORY_WEB (remove 'web' suffix to get prefix)
+          REPO_WEB="${{ vars.REPOSITORY_WEB }}"
+          IMAGE_PREFIX="${REPO_WEB%web}"
+
           echo "" >> deployment.env
           echo "# Registry Configuration (injected by CI/CD)" >> deployment.env
           echo "REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }}" >> deployment.env
@@ -131,10 +135,10 @@ jobs:
           echo "AWS_REGION=${{ vars.AWS_REGION }}" >> deployment.env
           echo "AWS_ACCESS_KEY_ID=${{ vars.AWS_ACCESS_KEY_ID }}" >> deployment.env
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> deployment.env
-          echo "IMAGE_PREFIX=" >> deployment.env
+          echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> deployment.env
           echo "IMAGE_TAG=latest" >> deployment.env
 
-          echo "Injected registry configuration (REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }})"
+          echo "Injected registry configuration (REGISTRY_TYPE=${{ vars.REGISTRY_TYPE }}, IMAGE_PREFIX=$IMAGE_PREFIX)"
 
       - name: Upload env artifact
         uses: actions/upload-artifact@v4
