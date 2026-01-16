@@ -9,7 +9,6 @@
    - Run your first commands
    - Understand the architecture
 
-2. **[QUICKSTART.md](./QUICKSTART.md)** - Detailed setup for all modes
    - 🐳 Local Docker (full stack)
    - ☁️ Cloud Supabase (managed DB)
    - 🚀 Production deployment
@@ -26,11 +25,9 @@
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | **[GETTING_STARTED.md](./GETTING_STARTED.md)** | Quick start, first steps, architecture overview | 🌟 Start here! |
-| **[QUICKSTART.md](./QUICKSTART.md)** | Detailed setup for all deployment modes | After getting started |
 | **[DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)** | All possible deployment scenarios explained | Planning architecture |
 | **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** | Production checklist, environment variables, scaling, monitoring | Going live |
 | **[CICD.md](./CICD.md)** | Automated CI/CD pipeline, secrets management, registry configuration | Setting up CI/CD |
-| **[SUPABASE_QUICKSTART.md](./SUPABASE_QUICKSTART.md)** | Step-by-step Supabase setup | Using cloud Supabase |
 | **[SUPABASE_STORAGE_SETUP.md](./SUPABASE_STORAGE_SETUP.md)** | Avatar storage configuration | Setting up avatars |
 
 ### Customization
@@ -84,7 +81,6 @@ make help
 → [FORKING.md](./FORKING.md) - Step-by-step customization
 
 **Use Supabase Cloud**
-→ [SUPABASE_QUICKSTART.md](./SUPABASE_QUICKSTART.md) - Setup guide
 
 **Understand the architecture**
 → [DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md) - All scenarios
@@ -99,7 +95,6 @@ make help
 → [DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md#-migration-paths)
 
 **Troubleshoot issues**
-→ [QUICKSTART.md](./QUICKSTART.md#-troubleshooting) - Common problems
 
 **Set up secrets management**
 → [CICD.md](./CICD.md#-secrets-management) - AWS SSM, GitHub Secrets, Manual
@@ -123,11 +118,9 @@ AtlasP2P provides automated setup scripts for common tasks:
 ```
 docs/
 ├── README.md                      # This file
-├── QUICKSTART.md                  # 🌟 Start here
 ├── FORKING.md                     # Customization guide
 ├── DEPLOYMENT_SCENARIOS.md        # All scenarios explained
 ├── PRODUCTION_DEPLOYMENT.md       # Production guide
-├── SUPABASE_QUICKSTART.md         # Supabase setup
 ├── SUPABASE_STORAGE_SETUP.md      # Avatar storage
 ├── ARCHITECTURE.md                # System design
 ├── API.md                         # API reference
@@ -158,4 +151,3 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 ---
 
-**Ready to start?** → [QUICKSTART.md](./QUICKSTART.md)

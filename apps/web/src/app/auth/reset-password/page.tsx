@@ -3,8 +3,9 @@
 /**
  * Password Reset Page
  *
- * Users land here after clicking the reset link in their email.
- * They can enter a new password to reset their account.
+ * Supports both:
+ * 1. Magic Link: Users land here after clicking link in email
+ * 2. OTP Code: Users can enter 6-digit code if link doesn't work
  */
 
 import { useState, useEffect, Suspense } from 'react';
@@ -14,6 +15,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuthEnabled } from '@/hooks/use-feature-flags';
 import { getThemeConfig } from '@/config';
 import { parseAuthError } from '@/lib/auth/errors';
+import { PasswordResetOTPInput } from '@/components/auth/PasswordResetOTPInput';
+
+type ResetMode = 'validating' | 'magic-link' | 'otp' | 'reset-password';
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -21,13 +25,13 @@ function ResetPasswordContent() {
   const theme = getThemeConfig();
   const isAuthEnabled = useAuthEnabled();
 
+  const [mode, setMode] = useState<ResetMode>('validating');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [validatingToken, setValidatingToken] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
 
   // Redirect if authentication is disabled
   useEffect(() => {
@@ -36,29 +40,39 @@ function ResetPasswordContent() {
     }
   }, [isAuthEnabled, router]);
 
-  // Validate the reset token on mount
+  // Determine mode on mount: magic link or OTP
   useEffect(() => {
-    const validateToken = async () => {
+    const determineMode = async () => {
       try {
         const supabase = createClient();
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (error || !session) {
-          setError('Invalid or expired reset link. Please request a new one.');
-          setTokenValid(false);
+        if (session) {
+          // User came via magic link and has valid session
+          setMode('magic-link');
+          setTimeout(() => setMode('reset-password'), 500);
         } else {
-          setTokenValid(true);
+          // No session - need OTP code
+          const emailParam = searchParams?.get('email');
+          if (emailParam) {
+            setEmail(emailParam);
+          }
+          setMode('otp');
         }
       } catch (err) {
-        setError('Failed to validate reset link. Please try again.');
-        setTokenValid(false);
-      } finally {
-        setValidatingToken(false);
+        console.error('Error determining reset mode:', err);
+        setMode('otp');
       }
     };
 
-    validateToken();
-  }, []);
+    determineMode();
+  }, [searchParams]);
+
+  // Handle OTP verification success
+  const handleOTPSuccess = (token: string) => {
+    console.log('OTP verified successfully');
+    setMode('reset-password');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,10 +126,84 @@ function ResetPasswordContent() {
     return null;
   }
 
-  if (validatingToken) {
+  if (mode === 'validating') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">Validating reset link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show OTP input if no magic link session
+  if (mode === 'otp') {
+    return (
+      <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted opacity-50" />
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 50%, ${theme.primaryColor}40 0%, transparent 50%), radial-gradient(circle at 80% 80%, ${theme.primaryColor}30 0%, transparent 50%)`,
+          }}
+        />
+
+        <div className="w-full max-w-md relative z-10">
+          {/* Back to Home */}
+          <button
+            onClick={() => router.push('/')}
+            className="mb-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all duration-200 hover:gap-3 group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Back to Home
+          </button>
+
+          {/* OTP Card */}
+          <div className="glass-strong rounded-2xl shadow-2xl p-8 animate-fade-in-scale">
+            {!email ? (
+              /* Email input if not in URL */
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-center">Reset Password</h2>
+                <p className="text-sm text-muted-foreground text-center">
+                  Enter your email to receive a verification code
+                </p>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-3 border-2 border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200"
+                />
+                <button
+                  onClick={async () => {
+                    if (!email) return;
+                    try {
+                      const supabase = createClient();
+                      await supabase.auth.resetPasswordForEmail(email, {
+                        redirectTo: `${window.location.origin}/auth/reset-password?email=${email}`,
+                      });
+                      // Email will be set, component will rerender with OTP input
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  disabled={!email}
+                  className="w-full py-3 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50"
+                  style={{ backgroundColor: theme.primaryColor }}
+                >
+                  Send Code
+                </button>
+              </div>
+            ) : (
+              <PasswordResetOTPInput
+                email={email}
+                onSuccess={handleOTPSuccess}
+              />
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -172,9 +260,18 @@ function ResetPasswordContent() {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-destructive font-medium">{error}</p>
+                  {error.toLowerCase().includes('invalid') || error.toLowerCase().includes('expired') && (
+                    <p className="text-xs text-destructive/80 mt-2">
+                      Reset links expire after a certain time. Request a new one from the login page.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -194,7 +291,7 @@ function ResetPasswordContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                   required
-                  disabled={success || !tokenValid}
+                  disabled={success || mode === 'validating'}
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 hover:border-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -214,16 +311,25 @@ function ResetPasswordContent() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter your password"
                   required
-                  disabled={success || !tokenValid}
+                  disabled={success || mode === 'validating'}
                   className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 hover:border-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
 
+            {/* Mode indicator for debugging */}
+            {mode === 'magic-link' && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  ✓ Link verified! Set your new password below.
+                </p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || success || !tokenValid}
+              disabled={loading || success || mode === 'validating'}
               className="w-full py-3 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
               style={{ backgroundColor: theme.primaryColor }}
             >

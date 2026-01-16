@@ -25,17 +25,18 @@ import { requireTurnstile } from '@/lib/feature-flags.server'
  * @returns {Promise<NextResponse>} Verification challenge and instructions
  */
 export async function POST(request: NextRequest) {
-  // Rate limit verification attempts
-  const rateLimitResult = await rateLimit(request, 'verify:initiate', RATE_LIMITS.VERIFY);
-  if (!rateLimitResult.allowed) {
-    return NextResponse.json(
-      {
-        error: 'Too many verification attempts. Please try again later.',
-        code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
-      },
-      { status: 429 }
-    );
-  }
+  try {
+    // Rate limit verification attempts
+    const rateLimitResult = await rateLimit(request, 'verify:initiate', RATE_LIMITS.VERIFY);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many verification attempts. Please try again later.',
+          code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
+        },
+        { status: 429 }
+      );
+    }
 
   const supabase = await createClient()
 
@@ -172,6 +173,16 @@ export async function POST(request: NextRequest) {
     },
     instructions
   })
+  } catch (err) {
+    console.error('Unexpected error in POST /api/verify:', err);
+    return NextResponse.json(
+      {
+        error: 'An unexpected error occurred. Please try again later.',
+        code: 'INTERNAL_ERROR'
+      },
+      { status: 500 }
+    );
+  }
 }
 
 function generateChallenge(method: string): string {
@@ -224,17 +235,18 @@ function getVerificationInstructions(
  * @returns {Promise<NextResponse>} Verification result
  */
 export async function PUT(request: NextRequest) {
-  // Rate limit verification completion attempts
-  const rateLimitResult = await rateLimit(request, 'verify:complete', RATE_LIMITS.VERIFY);
-  if (!rateLimitResult.allowed) {
-    return NextResponse.json(
-      {
-        error: 'Too many verification attempts. Please try again later.',
-        code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
-      },
-      { status: 429 }
-    );
-  }
+  try {
+    // Rate limit verification completion attempts
+    const rateLimitResult = await rateLimit(request, 'verify:complete', RATE_LIMITS.VERIFY);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many verification attempts. Please try again later.',
+          code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
+        },
+        { status: 429 }
+      );
+    }
 
   const supabase = await createClient()
 
@@ -574,6 +586,16 @@ export async function PUT(request: NextRequest) {
     message: 'Verification submitted successfully. An admin will review it shortly.',
     requiresAdminApproval: true
   })
+  } catch (err) {
+    console.error('Unexpected error in PUT /api/verify:', err);
+    return NextResponse.json(
+      {
+        error: 'An unexpected error occurred. Please try again later.',
+        code: 'INTERNAL_ERROR'
+      },
+      { status: 500 }
+    );
+  }
 }
 
 /**
@@ -583,21 +605,22 @@ export async function PUT(request: NextRequest) {
  * @returns {Promise<NextResponse>} Pending verification or null
  */
 export async function GET(request: NextRequest) {
-  // Rate limit verification status checks to prevent enumeration attacks
-  const rateLimitResult = await rateLimit(request, 'verify:read', RATE_LIMITS.VERIFY);
-  if (!rateLimitResult.allowed) {
-    console.warn('[Verification] Rate limit exceeded for GET request', {
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
-      endpoint: 'verify:read',
-    });
-    return NextResponse.json(
-      {
-        error: 'Too many requests. Please try again later.',
-        code: 'RATE_LIMIT_EXCEEDED'
-      },
-      { status: 429 }
-    );
-  }
+  try {
+    // Rate limit verification status checks to prevent enumeration attacks
+    const rateLimitResult = await rateLimit(request, 'verify:read', RATE_LIMITS.VERIFY);
+    if (!rateLimitResult.allowed) {
+      console.warn('[Verification] Rate limit exceeded for GET request', {
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+        endpoint: 'verify:read',
+      });
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please try again later.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        },
+        { status: 429 }
+      );
+    }
 
   const supabase = await createClient()
   const searchParams = request.nextUrl.searchParams
@@ -660,6 +683,16 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     pending: pending || null
   })
+  } catch (err) {
+    console.error('Unexpected error in GET /api/verify:', err);
+    return NextResponse.json(
+      {
+        error: 'An unexpected error occurred. Please try again later.',
+        code: 'INTERNAL_ERROR'
+      },
+      { status: 500 }
+    );
+  }
 }
 
 /**
@@ -669,21 +702,22 @@ export async function GET(request: NextRequest) {
  * @returns {Promise<NextResponse>} Success or error
  */
 export async function DELETE(request: NextRequest) {
-  // Rate limit verification cancellation to prevent abuse
-  const rateLimitResult = await rateLimit(request, 'verify:delete', RATE_LIMITS.VERIFY);
-  if (!rateLimitResult.allowed) {
-    console.warn('[Verification] Rate limit exceeded for DELETE request', {
-      ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
-      endpoint: 'verify:delete',
-    });
-    return NextResponse.json(
-      {
-        error: 'Too many requests. Please try again later.',
-        code: 'RATE_LIMIT_EXCEEDED'
-      },
-      { status: 429 }
-    );
-  }
+  try {
+    // Rate limit verification cancellation to prevent abuse
+    const rateLimitResult = await rateLimit(request, 'verify:delete', RATE_LIMITS.VERIFY);
+    if (!rateLimitResult.allowed) {
+      console.warn('[Verification] Rate limit exceeded for DELETE request', {
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+        endpoint: 'verify:delete',
+      });
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please try again later.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        },
+        { status: 429 }
+      );
+    }
 
   const supabase = await createClient()
 
@@ -801,4 +835,14 @@ export async function DELETE(request: NextRequest) {
     success: true,
     message: 'Verification cancelled'
   })
+  } catch (err) {
+    console.error('Unexpected error in DELETE /api/verify:', err);
+    return NextResponse.json(
+      {
+        error: 'An unexpected error occurred. Please try again later.',
+        code: 'INTERNAL_ERROR'
+      },
+      { status: 500 }
+    );
+  }
 }

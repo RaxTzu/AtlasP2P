@@ -80,9 +80,8 @@ services:
     environment:
       # Dev mode: web listens on 4000
       - WEB_PORT=4000
+      - NODE_ENV=development
     volumes:
       # Hot reload for crawler source
       - ./apps/crawler:/app/apps/crawler
       - geoip-data:/app/data/geoip
-    environment:
-      - NODE_ENV=development

@@ -778,7 +778,7 @@ export function VerificationModal({
 
               {/* Turnstile Widget for method selection */}
               {requiresTurnstile && (
-                <div className="mt-6 pt-6 border-t border-border">
+                <div className="mt-6 pt-6 border-t border-border flex justify-center">
                   <TurnstileWidget
                     onSuccess={setTurnstileToken}
                     onError={() => setError('CAPTCHA verification failed')}
@@ -1062,11 +1062,13 @@ export function VerificationModal({
 
                   {/* Turnstile for proof submission (non-DNS methods) */}
                   {requiresTurnstile && verification.method !== 'dns_txt' && (
-                    <TurnstileWidget
-                      onSuccess={setTurnstileToken}
-                      onError={() => setError('CAPTCHA verification failed')}
-                      onExpire={() => setTurnstileToken(null)}
-                    />
+                    <div className="flex justify-center">
+                      <TurnstileWidget
+                        onSuccess={setTurnstileToken}
+                        onError={() => setError('CAPTCHA verification failed')}
+                        onExpire={() => setTurnstileToken(null)}
+                      />
+                    </div>
                   )}
 
                   {/* Show Back/Submit buttons only for non-DNS methods */}

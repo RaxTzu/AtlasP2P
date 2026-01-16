@@ -130,6 +130,35 @@ await adminClient.from('admin_users').upsert(
 
 ---
 
+## API Endpoints (Two Services)
+
+AtlasP2P uses **two separate API services** - this can be confusing:
+
+### 1. Web App API (Node Verification)
+- **URL Pattern:** `https://yourdomain.com/api/*`
+- **Example:** `https://nodes-dingocoin.raxtzu.com/api/verify`
+- **Purpose:** Node verification, stats, admin operations
+- **Service:** Next.js API routes
+
+### 2. Supabase Auth API (Email/Auth Verification)
+- **URL Pattern:** `https://api-yourdomain.com/*` or `https://your-api-subdomain.com/*`
+- **Example:** `https://api-nodes-dingocoin.raxtzu.com/verify`
+- **Purpose:** Email verification, password reset, auth callbacks
+- **Service:** Supabase Auth (Kong gateway)
+- **Config:** Set via `NEXT_PUBLIC_SUPABASE_URL`
+
+### Common Confusion
+Both have `/verify` endpoints but they're completely different:
+- **Web API `/api/verify`** = Verify node ownership (signature, DNS, etc.)
+- **Supabase `/verify`** = Verify email address or password reset token
+
+If password reset links fail with "no Route matched", check:
+1. `NEXT_PUBLIC_SUPABASE_URL` is accessible
+2. Supabase Auth service is running (Kong container in Docker)
+3. Email redirect URL is correct in auth code
+
+---
+
 ## Troubleshooting
 
 ### NEXT_PUBLIC_* Not Working
@@ -145,6 +174,12 @@ await adminClient.from('admin_users').upsert(
 ### ECR Push 403
 - Check `IMAGE_PREFIX` in SSM matches ECR repo path
 - Verify IAM user has ECR push permissions
+
+### Password Reset Link Not Working
+- The link goes to Supabase API (e.g., `https://api-domain.com/verify`), NOT web API
+- Verify `NEXT_PUBLIC_SUPABASE_URL` is accessible from user's browser
+- Check Supabase Kong container is running in Docker
+- Verify `SITE_URL` and `API_EXTERNAL_URL` in `.env` are correct
 
 ---
 
