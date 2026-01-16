@@ -1,0 +1,692 @@
+# ===========================================
+# ATLASP2P - PRODUCTION DEPLOYMENT WORKFLOW (TEMPLATE FOR FORKS)
+# ===========================================
+# This is a TEMPLATE file for forks to customize and commit.
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file: cp .github/workflows/deploy.yml.example .github/workflows/deploy.yml
+# 2. Edit deploy.yml: Change branch name (line 26), verify settings
+# 3. Remove from gitignore: Edit .gitignore, remove line ".github/workflows/deploy.yml"
+# 4. Commit to your fork: git add .github/workflows/deploy.yml && git commit -m "Add deployment workflow"
+#
+# OR use Makefile: make setup-deploy
+#
+# Features:
+# - Automated CI/CD with smart detection, validation, backup, and rollback
+# - Config-driven via project.config.yaml (deployment section)
+# - Dual registry support (GHCR/ECR) with smart authentication
+# - Auto-detects Caddy mode (container/host/none)
+# - Auto-detects secrets source (AWS SSM/GitHub Secrets/manual)
+#
+# Security Note: This workflow uses only admin-controlled inputs (vars/secrets)
+# and enum-restricted workflow inputs. No user-provided content is used.
+
+name: Deploy to Production
+
+on:
+  push:
+    branches: [master, main]  # <-- CHANGE THIS to your default branch if needed
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.claude/**'
+
+  workflow_dispatch:
+    inputs:
+      override_mode:
+        description: 'Override deployment mode (empty = use config)'
+        type: choice
+        options: ['', 'self-hosted-docker', 'self-hosted-cloud']
+        default: ''
+      override_caddy:
+        description: 'Override Caddy mode (empty = auto-detect)'
+        type: choice
+        options: ['', 'container', 'host', 'none']
+        default: ''
+      override_secrets:
+        description: 'Override secrets source (empty = auto-detect)'
+        type: choice
+        options: ['', 'aws-ssm', 'github-secrets', 'manual']
+        default: ''
+      skip_backup:
+        description: 'Skip database backup (dangerous!)'
+        type: boolean
+        default: false
+      skip_validation:
+        description: 'Skip pre-deployment validation (dangerous!)'
+        type: boolean
+        default: false
+      force_rollback_test:
+        description: 'Test rollback (intentionally fail health check)'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+  # GitHub Environment name configured via DEPLOYMENT_ENVIRONMENT repository variable
+  # Defaults to 'production' if not set. Create environment in Settings → Environments.
+
+jobs:
+  detect-config:
+    name: Detect Deployment Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_mode: ${{ steps.detect.outputs.deployment_mode }}
+      caddy_mode: ${{ steps.detect.outputs.caddy_mode }}
+      secrets_source: ${{ steps.detect.outputs.secrets_source }}
+      make_target: ${{ steps.detect.outputs.make_target }}
+      rollback_enabled: ${{ steps.detect.outputs.rollback_enabled }}
+      backup_enabled: ${{ steps.detect.outputs.backup_enabled }}
+      health_check_enabled: ${{ steps.detect.outputs.health_check_enabled }}
+      registry_type: ${{ steps.detect.outputs.registry_type }}
+      registry_public: ${{ steps.detect.outputs.registry_public }}
+      registry_region: ${{ steps.detect.outputs.registry_region }}
+      repository_web: ${{ steps.detect.outputs.repository_web }}
+      repository_crawler: ${{ steps.detect.outputs.repository_crawler }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration
+        id: detect
+        env:
+          OVERRIDE_MODE: ${{ inputs.override_mode }}
+          OVERRIDE_CADDY: ${{ inputs.override_caddy }}
+          OVERRIDE_SECRETS: ${{ inputs.override_secrets }}
+          SKIP_BACKUP: ${{ inputs.skip_backup }}
+        run: |
+          CONFIG_FILE="config/project.config.yaml"
+          [ ! -f "$CONFIG_FILE" ] && CONFIG_FILE="config/project.config.yaml.example"
+
+          # Load deployment settings from YAML
+          DEPLOYMENT_MODE=$(yq '.deployment.mode' "$CONFIG_FILE")
+          CADDY_MODE=$(yq '.deployment.caddy.mode' "$CONFIG_FILE")
+          SECRETS_SOURCE=$(yq '.deployment.secrets.source' "$CONFIG_FILE")
+          ROLLBACK_ENABLED=$(yq '.deployment.rollback.enabled' "$CONFIG_FILE")
+          BACKUP_ENABLED=$(yq '.deployment.backup.enabled' "$CONFIG_FILE")
+          HEALTH_CHECK_ENABLED=$(yq '.deployment.healthCheck.enabled' "$CONFIG_FILE")
+
+          # Registry configuration - GENERIC variable names work with ANY registry
+          # Priority: GitHub environment variables → project.config.yaml → defaults
+          REGISTRY_TYPE="${{ vars.REGISTRY_TYPE }}"
+          REGISTRY_PUBLIC="${{ vars.REGISTRY_PUBLIC }}"
+          REGISTRY_REGION="${{ vars.REGISTRY_REGION }}"
+          REPOSITORY_WEB="${{ vars.REPOSITORY_WEB }}"
+          REPOSITORY_CRAWLER="${{ vars.REPOSITORY_CRAWLER }}"
+
+          # Fallback to YAML if GitHub vars not set
+          [ -z "$REGISTRY_TYPE" ] && REGISTRY_TYPE=$(yq '.deployment.registry.type' "$CONFIG_FILE")
+          [ -z "$REGISTRY_PUBLIC" ] && REGISTRY_PUBLIC=$(yq '.deployment.registry.public' "$CONFIG_FILE")
+          [ -z "$REGISTRY_REGION" ] && REGISTRY_REGION=$(yq '.deployment.registry.region' "$CONFIG_FILE")
+          [ -z "$REPOSITORY_WEB" ] && REPOSITORY_WEB=$(yq '.deployment.registry.repositories.web' "$CONFIG_FILE")
+          [ -z "$REPOSITORY_CRAWLER" ] && REPOSITORY_CRAWLER=$(yq '.deployment.registry.repositories.crawler' "$CONFIG_FILE")
+
+          # Final defaults if both GitHub vars and YAML are empty/null
+          [ "$REGISTRY_TYPE" = "null" ] || [ -z "$REGISTRY_TYPE" ] && REGISTRY_TYPE="ghcr"
+          [ "$REGISTRY_PUBLIC" = "null" ] || [ -z "$REGISTRY_PUBLIC" ] && REGISTRY_PUBLIC="true"
+          [ "$REGISTRY_REGION" = "null" ] || [ -z "$REGISTRY_REGION" ] && REGISTRY_REGION="us-east-1"
+
+          # Apply overrides from workflow inputs (safe - enum restricted)
+          [ -n "$OVERRIDE_MODE" ] && DEPLOYMENT_MODE="$OVERRIDE_MODE"
+          [ -n "$OVERRIDE_CADDY" ] && CADDY_MODE="$OVERRIDE_CADDY"
+          [ -n "$OVERRIDE_SECRETS" ] && SECRETS_SOURCE="$OVERRIDE_SECRETS"
+          [ "$SKIP_BACKUP" = "true" ] && BACKUP_ENABLED="false"
+
+          # Determine Make target
+          case "$DEPLOYMENT_MODE" in
+            "self-hosted-docker")
+              if [ "$CADDY_MODE" = "container" ] || [ "$CADDY_MODE" = "auto" ]; then
+                MAKE_TARGET="prod-docker"
+              else
+                MAKE_TARGET="prod-docker-no-caddy"
+              fi
+              ;;
+            "self-hosted-cloud")
+              if [ "$CADDY_MODE" = "container" ] || [ "$CADDY_MODE" = "auto" ]; then
+                MAKE_TARGET="prod-cloud"
+              else
+                MAKE_TARGET="prod-cloud-no-caddy"
+              fi
+              [ "$BACKUP_ENABLED" != "false" ] && BACKUP_ENABLED="false"
+              ;;
+          esac
+
+          echo "deployment_mode=$DEPLOYMENT_MODE" >> $GITHUB_OUTPUT
+          echo "caddy_mode=$CADDY_MODE" >> $GITHUB_OUTPUT
+          echo "secrets_source=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
+          echo "make_target=$MAKE_TARGET" >> $GITHUB_OUTPUT
+          echo "rollback_enabled=$ROLLBACK_ENABLED" >> $GITHUB_OUTPUT
+          echo "backup_enabled=$BACKUP_ENABLED" >> $GITHUB_OUTPUT
+          echo "health_check_enabled=$HEALTH_CHECK_ENABLED" >> $GITHUB_OUTPUT
+          echo "registry_type=$REGISTRY_TYPE" >> $GITHUB_OUTPUT
+          echo "registry_public=$REGISTRY_PUBLIC" >> $GITHUB_OUTPUT
+          echo "registry_region=$REGISTRY_REGION" >> $GITHUB_OUTPUT
+          echo "repository_web=$REPOSITORY_WEB" >> $GITHUB_OUTPUT
+          echo "repository_crawler=$REPOSITORY_CRAWLER" >> $GITHUB_OUTPUT
+
+          # Summary
+          echo "### 🎯 Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** $DEPLOYMENT_MODE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Caddy:** $CADDY_MODE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Secrets:** $SECRETS_SOURCE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Make Target:** $MAKE_TARGET" >> $GITHUB_STEP_SUMMARY
+
+  auto-detect:
+    name: Auto-Detect Infrastructure
+    needs: detect-config
+    if: |
+      needs.detect-config.outputs.caddy_mode == 'auto' ||
+      needs.detect-config.outputs.secrets_source == 'auto'
+    runs-on: ubuntu-latest
+    outputs:
+      detected_caddy: ${{ steps.detect-infra.outputs.caddy }}
+      detected_secrets: ${{ steps.detect-infra.outputs.secrets }}
+
+    steps:
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Detect infrastructure
+        id: detect-infra
+        env:
+          CADDY_MODE: ${{ needs.detect-config.outputs.caddy_mode }}
+          SECRETS_SOURCE: ${{ needs.detect-config.outputs.secrets_source }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+        run: |
+          # Auto-detect Caddy
+          if [ "$CADDY_MODE" = "auto" ]; then
+            if ssh -i ~/.ssh/deploy_key -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
+               "$SSH_USER@$SSH_HOST" "systemctl is-active caddy >/dev/null 2>&1"; then
+              CADDY_MODE="host"
+            elif ssh -i ~/.ssh/deploy_key -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
+                 "$SSH_USER@$SSH_HOST" "sudo lsof -i :80 -i :443 >/dev/null 2>&1"; then
+              CADDY_MODE="none"
+            else
+              CADDY_MODE="container"
+            fi
+          fi
+
+          # Auto-detect secrets
+          if [ "$SECRETS_SOURCE" = "auto" ]; then
+            if aws sts get-caller-identity &>/dev/null; then
+              SECRETS_SOURCE="aws-ssm"
+            elif [ -n "${{ secrets.DOMAIN }}" ]; then
+              SECRETS_SOURCE="github-secrets"
+            else
+              SECRETS_SOURCE="manual"
+            fi
+          fi
+
+          echo "caddy=$CADDY_MODE" >> $GITHUB_OUTPUT
+          echo "secrets=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  prepare-env:
+    name: Prepare Environment
+    needs: [detect-config, auto-detect]
+    if: always() && needs.detect-config.result == 'success' && (needs.auto-detect.result == 'success' || needs.auto-detect.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ vars.DEPLOYMENT_ENVIRONMENT || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Resolve configuration
+        id: resolve
+        run: |
+          CADDY_MODE="${{ needs.auto-detect.outputs.detected_caddy || needs.detect-config.outputs.caddy_mode }}"
+          SECRETS_SOURCE="${{ needs.auto-detect.outputs.detected_secrets || needs.detect-config.outputs.secrets_source }}"
+          echo "caddy_mode=$CADDY_MODE" >> $GITHUB_OUTPUT
+          echo "secrets_source=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS (SSM)
+        if: steps.resolve.outputs.secrets_source == 'aws-ssm'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ needs.detect-config.outputs.registry_region }}
+
+      - name: Fetch from AWS SSM
+        if: steps.resolve.outputs.secrets_source == 'aws-ssm'
+        run: |
+          CONFIG_FILE="config/project.config.yaml"
+          [ ! -f "$CONFIG_FILE" ] && CONFIG_FILE="config/project.config.yaml.example"
+          SSM_PATH=$(yq '.deployment.secrets.ssmPath' "$CONFIG_FILE")
+          aws ssm get-parameter --name "$SSM_PATH" --with-decryption --query 'Parameter.Value' --output text > .env.full
+          echo "=== SSM Fetched - Checking for NEXT_PUBLIC vars ==="
+          grep "^NEXT_PUBLIC" .env.full || echo "ERROR: No NEXT_PUBLIC vars in SSM!"
+          echo "=== Total env vars in SSM: $(grep -c '^[A-Z]' .env.full) ==="
+
+      - name: Create from GitHub Secrets
+        if: steps.resolve.outputs.secrets_source == 'github-secrets'
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          ACME_EMAIL: ${{ secrets.ACME_EMAIL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          CHAIN_RPC_PASSWORD: ${{ secrets.CHAIN_RPC_PASSWORD }}
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+        run: |
+          cat > .env.full << 'EOF'
+          DOMAIN=${DOMAIN}
+          ACME_EMAIL=${ACME_EMAIL}
+          NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          JWT_SECRET=${JWT_SECRET}
+          SMTP_HOST=${SMTP_HOST}
+          SMTP_PASS=${SMTP_PASS}
+          CHAIN_RPC_PASSWORD=${CHAIN_RPC_PASSWORD}
+          ADMIN_EMAILS=${ADMIN_EMAILS}
+          EOF
+          # Expand variables
+          envsubst < .env.full > .env.tmp && mv .env.tmp .env.full
+
+      - name: Prepare deployment environment
+        if: steps.resolve.outputs.secrets_source != 'manual'
+        run: |
+          # Copy .env.full to deployment.env for Docker build and deployment
+          if [ -f .env.full ]; then
+            cp .env.full deployment.env
+          else
+            touch deployment.env
+          fi
+
+      - name: Inject registry configuration
+        run: |
+          REGISTRY_TYPE="${{ needs.detect-config.outputs.registry_type }}"
+          REGISTRY_PUBLIC="${{ needs.detect-config.outputs.registry_public }}"
+          REGISTRY_REGION="${{ needs.detect-config.outputs.registry_region }}"
+          REPO_WEB="${{ needs.detect-config.outputs.repository_web }}"
+
+          IMAGE_PREFIX="${REPO_WEB%web}"
+
+          cat >> deployment.env << EOF
+
+          REGISTRY_TYPE=${REGISTRY_TYPE}
+          REGISTRY_PUBLIC=${REGISTRY_PUBLIC}
+          REGISTRY_REGION=${REGISTRY_REGION}
+          IMAGE_PREFIX=${IMAGE_PREFIX}
+          IMAGE_TAG=latest
+          EOF
+
+          if [ "$REGISTRY_TYPE" = "ghcr" ]; then
+            echo "REGISTRY=ghcr.io" >> deployment.env
+          fi
+
+          echo "=== deployment.env registry config ==="
+          tail -7 deployment.env
+          echo "=== File size: $(wc -l < deployment.env) lines ==="
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment
+          path: deployment.env
+          retention-days: 1
+
+  build:
+    name: Build Images
+    needs: [detect-config, prepare-env]
+    if: |
+      always() &&
+      needs.detect-config.result == 'success' &&
+      needs.prepare-env.result == 'success'
+    runs-on: ubuntu-latest
+    environment: ${{ vars.DEPLOYMENT_ENVIRONMENT || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download environment for build
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        uses: actions/download-artifact@v4
+        with:
+          name: environment
+          path: .
+
+      - name: Verify deployment.env exists
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        run: |
+          ls -la deployment.env
+          echo "=== Checking for NEXT_PUBLIC vars ==="
+          grep "^NEXT_PUBLIC" deployment.env || echo "WARNING: No NEXT_PUBLIC vars found!"
+          echo "=== Total lines: $(wc -l < deployment.env) ==="
+
+      - name: Extract NEXT_PUBLIC vars for build
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        id: next_public
+        run: |
+          BUILD_ARGS=""
+          while IFS='=' read -r key value; do
+            if [[ $key == NEXT_PUBLIC_* ]]; then
+              BUILD_ARGS="${BUILD_ARGS}${key}=${value}"$'\n'
+              echo "${key}=***"
+            fi
+          done < deployment.env
+
+          echo "build_args<<EOF" >> $GITHUB_OUTPUT
+          echo "$BUILD_ARGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (ECR only)
+        if: needs.detect-config.outputs.registry_type == 'ecr'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ needs.detect-config.outputs.registry_region }}
+
+      - name: Login to Amazon ECR
+        if: needs.detect-config.outputs.registry_type == 'ecr'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Login to GitHub Container Registry
+        if: needs.detect-config.outputs.registry_type == 'ghcr'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set registry URLs
+        id: registry
+        run: |
+          # Use repository names from config (no construction)
+          if [ "${{ needs.detect-config.outputs.registry_type }}" = "ghcr" ]; then
+            REGISTRY="ghcr.io"
+            WEB_IMAGE="${REGISTRY}/${{ needs.detect-config.outputs.repository_web }}:latest"
+            CRAWLER_IMAGE="${REGISTRY}/${{ needs.detect-config.outputs.repository_crawler }}:latest"
+          else
+            # ECR
+            REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+            WEB_IMAGE="${REGISTRY}/${{ needs.detect-config.outputs.repository_web }}:latest"
+            CRAWLER_IMAGE="${REGISTRY}/${{ needs.detect-config.outputs.repository_crawler }}:latest"
+          fi
+
+          echo "web_image=${WEB_IMAGE}" >> $GITHUB_OUTPUT
+          echo "crawler_image=${CRAWLER_IMAGE}" >> $GITHUB_OUTPUT
+
+      - name: Build web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          target: production
+          push: true
+          tags: ${{ steps.registry.outputs.web_image }}
+          build-args: |
+            CACHEBUST=${{ github.sha }}
+            ${{ steps.next_public.outputs.build_args || '' }}
+          cache-from: type=gha
+
+      - name: Build crawler
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.crawler
+          push: true
+          tags: ${{ steps.registry.outputs.crawler_image }}
+          cache-from: type=gha
+
+  deploy:
+    name: Deploy
+    needs: [detect-config, prepare-env, build]
+    if: |
+      always() &&
+      needs.detect-config.result == 'success' &&
+      needs.prepare-env.result == 'success' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    environment: ${{ vars.DEPLOYMENT_ENVIRONMENT || 'production' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download env
+        if: needs.detect-config.outputs.secrets_source != 'manual'
+        uses: actions/download-artifact@v4
+        with:
+          name: environment
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Copy files
+        env:
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          SECRETS_SOURCE: ${{ needs.detect-config.outputs.secrets_source }}
+        run: |
+          scp -i ~/.ssh/deploy_key docker-compose.yml docker-compose.prod.yml docker-compose.cloud-prod.yml Makefile \
+            "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          scp -i ~/.ssh/deploy_key -r config "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          scp -i ~/.ssh/deploy_key -r supabase "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          scp -i ~/.ssh/deploy_key -r docker "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          if [ "$SECRETS_SOURCE" != "manual" ]; then
+            scp -i ~/.ssh/deploy_key deployment.env "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/.env"
+          fi
+
+      - name: Deploy
+        env:
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          MAKE_TARGET: ${{ needs.detect-config.outputs.make_target }}
+          REGISTRY: ${{ vars.REGISTRY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          BACKUP_ENABLED: ${{ needs.detect-config.outputs.backup_enabled }}
+          ROLLBACK_ENABLED: ${{ needs.detect-config.outputs.rollback_enabled }}
+          FORCE_ROLLBACK_TEST: ${{ inputs.force_rollback_test }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" bash -s << ENDSSH
+            set -e
+            set -o pipefail
+
+            echo "======================================"
+            echo "DEPLOYMENT STARTED: \$(date)"
+            echo "======================================"
+
+            cd ${{ vars.DEPLOY_PATH }}
+            echo "Working directory: \$(pwd)"
+
+            if [ "${{ needs.detect-config.outputs.backup_enabled }}" = "true" ]; then
+              echo ""
+              echo "==> Attempting database backup..."
+              mkdir -p backups
+              BACKUP_FILE="backups/db-\$(date +%Y%m%d-%H%M%S).sql"
+
+              set +e
+              docker compose exec -T db psql -U postgres -lqt | cut -d \| -f 1 | grep -qw atlasp2p 2>/dev/null
+              DB_EXISTS=\$?
+              set -e
+
+              if [ \$DB_EXISTS -eq 0 ]; then
+                set +e
+                docker compose exec -T db pg_dump -U postgres atlasp2p > "\${BACKUP_FILE}" 2>/dev/null
+                BACKUP_STATUS=\$?
+                set -e
+
+                if [ \$BACKUP_STATUS -eq 0 ]; then
+                  echo "✓ Backup created: \${BACKUP_FILE} (\$(wc -l < \${BACKUP_FILE}) lines)"
+                else
+                  echo "⚠ Backup failed (non-fatal)"
+                fi
+              else
+                echo "⚠ Database not found or not ready, skipping backup (non-fatal)"
+              fi
+            fi
+
+            echo ""
+            echo "==> Loading registry configuration..."
+
+            if [ ! -f .env ]; then
+              echo "ERROR: .env file not found in \$(pwd)"
+              echo "Files in directory:"
+              ls -la
+              exit 1
+            fi
+
+            if ! source .env; then
+              echo "ERROR: Failed to source .env file"
+              echo ".env contents:"
+              head -20 .env
+              exit 1
+            fi
+
+            REGISTRY_TYPE=\${REGISTRY_TYPE:-ghcr}
+            REGISTRY_PUBLIC=\${REGISTRY_PUBLIC:-true}
+            REGISTRY_REGION=\${REGISTRY_REGION:-us-east-1}
+            IMAGE_PREFIX=\${IMAGE_PREFIX}
+            IMAGE_TAG=\${IMAGE_TAG:-latest}
+
+            echo "Registry Type: \${REGISTRY_TYPE}"
+            echo "Registry: \${REGISTRY}"
+            echo "Image Prefix: \${IMAGE_PREFIX}"
+            echo "Image Tag: \${IMAGE_TAG}"
+
+            echo ""
+            if [ "\$REGISTRY_TYPE" = "ecr" ]; then
+              echo "==> Authenticating to Amazon ECR..."
+
+              if command -v aws &> /dev/null; then
+                echo "Using host AWS CLI"
+                if ! aws ecr get-login-password --region \${REGISTRY_REGION} | docker login --username AWS --password-stdin \${REGISTRY}; then
+                  echo "ERROR: ECR authentication failed"
+                  exit 1
+                fi
+              elif [ -n "\${AWS_ACCESS_KEY_ID}" ] && [ -n "\${AWS_SECRET_ACCESS_KEY}" ]; then
+                echo "Using AWS credentials from .env"
+                export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=\${REGISTRY_REGION}
+                if ! aws ecr get-login-password --region \${REGISTRY_REGION} | docker login --username AWS --password-stdin \${REGISTRY}; then
+                  echo "ERROR: ECR authentication failed"
+                  exit 1
+                fi
+              else
+                echo "ERROR: No AWS CLI or credentials available"
+                exit 1
+              fi
+              echo "✓ ECR authentication successful"
+
+            elif [ "\$REGISTRY_TYPE" = "ghcr" ]; then
+              echo "==> Authenticating to GitHub Container Registry..."
+              if [ "\$REGISTRY_PUBLIC" = "true" ]; then
+                echo "Registry is public, attempting pull without auth first..."
+                if ! docker pull \${REGISTRY}/\${IMAGE_PREFIX}web:\${IMAGE_TAG}; then
+                  echo "Public pull failed, authenticating with GitHub token..."
+                  if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+                    echo "ERROR: GHCR authentication failed"
+                    exit 1
+                  fi
+                fi
+              else
+                echo "Registry is private, authenticating with GitHub token..."
+                if ! echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin; then
+                  echo "ERROR: GHCR authentication failed"
+                  exit 1
+                fi
+              fi
+              echo "✓ GHCR authentication successful"
+            else
+              echo "ERROR: Unknown registry type: \${REGISTRY_TYPE}"
+              exit 1
+            fi
+
+            echo ""
+            echo "==> Pulling Docker images..."
+            echo "Pulling web and crawler images from \${REGISTRY}..."
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}web:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull web image"
+              exit 1
+            fi
+            if ! docker pull "\${REGISTRY}/\${IMAGE_PREFIX}crawler:\${IMAGE_TAG}"; then
+              echo "ERROR: Failed to pull crawler image"
+              exit 1
+            fi
+            echo "✓ Docker images pulled successfully"
+
+            echo ""
+            echo "==> Deploying with make target: ${{ needs.detect-config.outputs.make_target }}"
+            if ! make ${{ needs.detect-config.outputs.make_target }}; then
+              echo "ERROR: Deployment failed (make command failed)"
+              exit 1
+            fi
+            echo "✓ Deployment completed"
+
+            echo ""
+            echo "==> Checking container status..."
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep atlasp2p || true
+
+            if [ "${{ inputs.force_rollback_test }}" != "true" ]; then
+              echo ""
+              echo "==> Running health check..."
+              for i in {1..10}; do
+                if curl -sf http://localhost:4000/api/stats > /dev/null; then
+                  echo "✓ Health check passed (attempt \$i)"
+                  break
+                fi
+                echo "Health check failed (attempt \$i/10), retrying..."
+                sleep 3
+                if [ \$i -eq 10 ]; then
+                  echo "ERROR: Health check failed after 10 attempts"
+                  echo "Container logs:"
+                  docker logs atlasp2p-web --tail 50 2>&1 || true
+                  exit 1
+                fi
+              done
+            fi
+
+            echo ""
+            echo "==> Cleaning up old images..."
+            docker image prune -af --filter "until=24h" || echo "WARNING: Image cleanup failed (non-fatal)"
+
+            echo ""
+            echo "======================================"
+            echo "DEPLOYMENT SUCCESSFUL: \$(date)"
+            echo "======================================"
+          ENDSSH
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

@@ -28,7 +28,8 @@
 | **[GETTING_STARTED.md](./GETTING_STARTED.md)** | Quick start, first steps, architecture overview | 🌟 Start here! |
 | **[QUICKSTART.md](./QUICKSTART.md)** | Detailed setup for all deployment modes | After getting started |
 | **[DEPLOYMENT_SCENARIOS.md](./DEPLOYMENT_SCENARIOS.md)** | All possible deployment scenarios explained | Planning architecture |
-| **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** | Production checklist, scaling, monitoring | Going live |
+| **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** | Production checklist, environment variables, scaling, monitoring | Going live |
+| **[CICD.md](./CICD.md)** | Automated CI/CD pipeline, secrets management, registry configuration | Setting up CI/CD |
 | **[SUPABASE_QUICKSTART.md](./SUPABASE_QUICKSTART.md)** | Step-by-step Supabase setup | Using cloud Supabase |
 | **[SUPABASE_STORAGE_SETUP.md](./SUPABASE_STORAGE_SETUP.md)** | Avatar storage configuration | Setting up avatars |
 
@@ -99,6 +100,23 @@ make help
 
 **Troubleshoot issues**
 → [QUICKSTART.md](./QUICKSTART.md#-troubleshooting) - Common problems
+
+**Set up secrets management**
+→ [CICD.md](./CICD.md#-secrets-management) - AWS SSM, GitHub Secrets, Manual
+
+**Configure Docker registry**
+→ [CICD.md](./CICD.md#-docker-registry-configuration) - GHCR vs ECR
+
+## 🛠️ Helper Scripts
+
+AtlasP2P provides automated setup scripts for common tasks:
+
+| Script | Purpose | Documentation |
+|--------|---------|---------------|
+| `scripts/setup-ssm.sh` | Upload secrets to AWS Systems Manager Parameter Store | [CI/CD Guide](./CICD.md#option-1-aws-systems-manager-parameter-store-recommended-for-teams) |
+| `scripts/setup-github-secrets.sh` | Generate GitHub Secrets from .env file | [CI/CD Guide](./CICD.md#option-2-github-secrets-easiest-for-solo-developers) |
+
+**Note:** Helper scripts are coming soon. For now, follow manual setup in the CI/CD documentation.
 
 ## 📂 Documentation Structure
 

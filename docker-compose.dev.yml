@@ -77,6 +77,9 @@ services:
 
   # Crawler with hot reload
   crawler:
+    environment:
+      # Dev mode: web listens on 4000
+      - WEB_PORT=4000
     volumes:
       # Hot reload for crawler source
       - ./apps/crawler:/app/apps/crawler

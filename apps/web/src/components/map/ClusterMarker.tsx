@@ -51,7 +51,7 @@ export default function ClusterMarker({ count, nodes, onClick }: ClusterMarkerPr
   const tierColor = getTierColor(topNode?.tier || 'standard', true);
 
   // Image source - avatar or default marker
-  const imageSrc = topNode?.avatarUrl || '/logos/marker-icon.svg';
+  const imageSrc = topNode?.avatarUrl || '/logos/dingocoin.png';
   const isCustomAvatar = !!topNode?.avatarUrl;
 
   return (
