@@ -32,6 +32,16 @@ export async function middleware(request: NextRequest) {
     console.log(`[Middleware] Auth cookies (${authCookies.length}):`, authCookies.map(c => `${c.name}=${c.value?.substring(0, 50)}...`));
   }
 
+  // CRITICAL: Force password reset if flag is set
+  // User verified identity but hasn't updated password yet
+  if (user && user.user_metadata?.password_reset_required === true) {
+    // Only allow access to reset password page
+    if (!pathname.startsWith('/auth/reset-password')) {
+      console.log('[Middleware] Password reset required - redirecting to reset page');
+      return NextResponse.redirect(new URL('/auth/reset-password', request.url));
+    }
+  }
+
   // If user session is invalid (e.g., user deleted from DB), clear cookies and redirect to auth
   if (error && error.message.includes('User from sub claim in JWT does not exist')) {
     console.log('[Middleware] Invalid session detected, clearing cookies');

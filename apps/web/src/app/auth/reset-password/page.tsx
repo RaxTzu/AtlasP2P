@@ -99,8 +99,10 @@ function ResetPasswordContent() {
     try {
       const supabase = createClient();
 
+      // Update password AND clear the password_reset_required flag
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
+        data: { password_reset_required: false }
       });
 
       if (updateError) {

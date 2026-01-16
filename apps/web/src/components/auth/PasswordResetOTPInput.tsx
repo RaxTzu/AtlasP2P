@@ -191,6 +191,11 @@ export function PasswordResetOTPInput({ email, onSuccess }: PasswordResetOTPInpu
       if (error) throw error;
 
       if (data.session) {
+        // Set flag to force password update before accessing other routes
+        await supabase.auth.updateUser({
+          data: { password_reset_required: true }
+        });
+
         setState('success');
         setTimeout(() => {
           onSuccess(code);

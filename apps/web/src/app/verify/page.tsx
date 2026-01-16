@@ -58,6 +58,13 @@ function VerifyContent() {
           throw new Error('No session returned from verification');
         }
 
+        // If this is a password recovery, set flag to force password update
+        if (type === 'recovery') {
+          await supabase.auth.updateUser({
+            data: { password_reset_required: true }
+          });
+        }
+
         setState('success');
 
         // Redirect based on type
