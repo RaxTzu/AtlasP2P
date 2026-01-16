@@ -12,8 +12,10 @@ interface TooltipProps {
 export function Tooltip({ content, children, position = 'top', delay = 300 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [adjustedPosition, setAdjustedPosition] = useState(position);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
@@ -22,6 +24,30 @@ export function Tooltip({ content, children, position = 'top', delay = 300 }: To
       }
     };
   }, []);
+
+  // Adjust position if tooltip would go out of bounds
+  useEffect(() => {
+    if (isVisible && tooltipRef.current && triggerRef.current) {
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      let newPosition = position;
+
+      // Check if tooltip goes out of viewport and adjust
+      if (position === 'top' && tooltipRect.top < 0) {
+        newPosition = 'bottom';
+      } else if (position === 'bottom' && tooltipRect.bottom > viewportHeight) {
+        newPosition = 'top';
+      } else if (position === 'left' && tooltipRect.left < 0) {
+        newPosition = 'right';
+      } else if (position === 'right' && tooltipRect.right > viewportWidth) {
+        newPosition = 'left';
+      }
+
+      setAdjustedPosition(newPosition);
+    }
+  }, [isVisible, position]);
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     if (triggerRef.current) {
@@ -45,7 +71,7 @@ export function Tooltip({ content, children, position = 'top', delay = 300 }: To
   };
 
   const getPosition = () => {
-    switch (position) {
+    switch (adjustedPosition) {
       case 'bottom':
         return 'top-full mt-2';
       case 'left':
@@ -68,6 +94,7 @@ export function Tooltip({ content, children, position = 'top', delay = 300 }: To
 
       {isVisible && (
         <div
+          ref={tooltipRef}
           className={`absolute ${getPosition()} left-1/2 -translate-x-1/2 z-50 animate-fade-in-scale pointer-events-none`}
           style={{
             animation: 'fadeInScale 0.15s ease-out'
@@ -80,12 +107,12 @@ export function Tooltip({ content, children, position = 'top', delay = 300 }: To
           </div>
 
           {/* Arrow */}
-          {position === 'top' && (
+          {adjustedPosition === 'top' && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
               <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-border/50" />
             </div>
           )}
-          {position === 'bottom' && (
+          {adjustedPosition === 'bottom' && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1">
               <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-border/50" />
             </div>
