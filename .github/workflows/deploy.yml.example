@@ -534,11 +534,12 @@ jobs:
 
       - name: Deploy application
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} \
-            "DEPLOYMENT_MODE=${{ needs.detect-config.outputs.deployment_mode }}" \
-            bash -s << 'DEPLOY_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} bash -s << 'DEPLOY_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
+
+            # Set deployment mode
+            DEPLOYMENT_MODE="${{ needs.detect-config.outputs.deployment_mode }}"
 
             echo "Loading environment configuration..."
             if [ -f .env ]; then
