@@ -45,18 +45,23 @@ COPY --from=deps /app/packages/config/node_modules ./packages/config/node_module
 COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
 COPY . .
 
+# Build-time arguments for NEXT_PUBLIC_* variables
+# These are passed via docker build --build-arg from CI/CD workflow
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_ENABLE_TURNSTILE
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS
 
+# Convert build args to environment variables for Next.js build
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS
 
+# Also copy deployment.env as .env.production for additional variables
+# This provides full environment config beyond just NEXT_PUBLIC_* vars
 COPY deployment.env apps/web/.env.production
 
 ENV NEXT_TELEMETRY_DISABLED=1

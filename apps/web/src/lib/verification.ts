@@ -27,6 +27,79 @@ export interface NetworkConfig {
   addressPrefix: string;
 }
 
+/**
+ * Verification status constants
+ * Used throughout the application for type safety and consistency
+ */
+export const VerificationStatus = {
+  PENDING: 'pending' as const,
+  PENDING_APPROVAL: 'pending_approval' as const,
+  VERIFIED: 'verified' as const,
+  FAILED: 'failed' as const,
+  EXPIRED: 'expired' as const,
+} as const;
+
+export type VerificationStatusType = typeof VerificationStatus[keyof typeof VerificationStatus];
+
+/**
+ * Verification method constants
+ */
+export const VerificationMethod = {
+  MESSAGE_SIGN: 'message_sign' as const,
+  USER_AGENT: 'user_agent' as const,
+  PORT_CHECK: 'port_check' as const,
+  DNS_TXT: 'dns_txt' as const,
+} as const;
+
+export type VerificationMethodType = typeof VerificationMethod[keyof typeof VerificationMethod];
+
+/**
+ * Verification error codes for standardized error responses
+ */
+export const VerificationErrorCode = {
+  // Rate limiting
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+
+  // Missing parameters
+  MISSING_NODE_ID: 'MISSING_NODE_ID',
+  MISSING_VERIFICATION_ID: 'MISSING_VERIFICATION_ID',
+  PROOF_REQUIRED: 'PROOF_REQUIRED',
+
+  // Authentication
+  AUTHENTICATION_REQUIRED: 'AUTHENTICATION_REQUIRED',
+  FORBIDDEN: 'FORBIDDEN',
+
+  // Validation errors
+  INVALID_NODE_ID: 'INVALID_NODE_ID',
+  INVALID_VERIFICATION_ID: 'INVALID_VERIFICATION_ID',
+  INVALID_DOMAIN_FORMAT: 'INVALID_DOMAIN_FORMAT',
+  DOMAIN_BLOCKED: 'DOMAIN_BLOCKED',
+  INVALID_SIGNATURE: 'INVALID_SIGNATURE',
+  INVALID_ADDRESS: 'INVALID_ADDRESS',
+  INVALID_STATUS: 'INVALID_STATUS',
+
+  // Not found
+  NODE_NOT_FOUND: 'NODE_NOT_FOUND',
+  VERIFICATION_NOT_FOUND: 'VERIFICATION_NOT_FOUND',
+
+  // Status errors
+  VERIFICATION_EXPIRED: 'VERIFICATION_EXPIRED',
+  VERIFICATION_FAILED: 'VERIFICATION_FAILED',
+  ALREADY_VERIFIED: 'ALREADY_VERIFIED',
+
+  // Database errors
+  DATABASE_ERROR: 'DATABASE_ERROR',
+  DELETE_FAILED: 'DELETE_FAILED',
+  CREATE_FAILED: 'CREATE_FAILED',
+  UPDATE_FAILED: 'UPDATE_FAILED',
+
+  // Turnstile
+  TURNSTILE_REQUIRED: 'TURNSTILE_REQUIRED',
+  TURNSTILE_FAILED: 'TURNSTILE_FAILED',
+} as const;
+
+export type VerificationErrorCodeType = typeof VerificationErrorCode[keyof typeof VerificationErrorCode];
+
 // Fallback network configs for common chains (used when verifying other chains)
 const FALLBACK_NETWORK_CONFIGS: Record<string, NetworkConfig> = {
   bitcoin: {

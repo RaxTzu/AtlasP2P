@@ -6,13 +6,10 @@ const nextConfig: NextConfig = {
   // Output standalone server to bypass Next.js 16 static pre-rendering bug
   output: 'standalone',
 
-  // Explicitly define env vars to ensure Next.js inlines them into client bundle
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    NEXT_PUBLIC_ENABLE_TURNSTILE: process.env.NEXT_PUBLIC_ENABLE_TURNSTILE,
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-    NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS: process.env.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS,
+  // Include WASM files that Next.js standalone doesn't automatically trace
+  outputFileTracingIncludes: {
+    '/api/verify': ['./node_modules/tiny-secp256k1/**/*'],
+    '/api/verify/dns-check': ['./node_modules/tiny-secp256k1/**/*'],
   },
 
   // Transpile workspace packages and CommonJS dependencies

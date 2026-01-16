@@ -14,6 +14,7 @@ build
 .env.*.local
 .env.production
 .env.development
+config/production.env
 
 # IDE
 .idea
@@ -41,6 +42,7 @@ playwright-screenshots/
 .playwright-artifacts-*
 .last-run.json
 .nyc_output/
+.playwright-mcp
 
 # Turbo
 .turbo

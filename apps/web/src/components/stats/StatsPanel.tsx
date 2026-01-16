@@ -113,79 +113,79 @@ export function StatsPanel() {
       }} />
 
       <div className="relative">
-        {/* Header - compact for sidebar */}
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 rounded-lg shadow-md flex-shrink-0" style={{
+        {/* Header - responsive */}
+        <div className="px-3 pt-3 pb-2.5 lg:px-4 lg:pt-4 lg:pb-3">
+          <div className="flex items-center gap-2 mb-3 lg:mb-4">
+            <div className="p-1.5 lg:p-2 rounded-lg shadow-md flex-shrink-0" style={{
               background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
             }}>
-              <BarChart3 className="h-4 w-4 text-white" />
+              <BarChart3 className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-white" />
             </div>
             <h2 className="text-sm font-bold text-foreground truncate">
               Network Overview
             </h2>
           </div>
 
-          {/* Main Stats Grid - compact 2x2 */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Main Stats Grid - responsive 2x2 */}
+          <div className="grid grid-cols-2 gap-1.5 lg:gap-2">
             {statItems.map((item) => (
               <div
                 key={item.label}
-                className="relative overflow-hidden rounded-lg bg-muted/50 p-3 border border-border/50 transition-all duration-200 hover:bg-muted/70 group"
+                className="relative overflow-hidden rounded-lg bg-muted/50 p-2.5 lg:p-3 border border-border/50 transition-all duration-200 hover:bg-muted/70 group"
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-1.5 lg:gap-2 mb-1">
                   <item.icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: item.color }} />
                   <p className="text-xs font-medium text-muted-foreground leading-tight">
                     {item.label}
                   </p>
                 </div>
-                <p className="text-xl font-bold tabular-nums" style={{ color: item.color }}>
+                <p className="text-lg lg:text-xl font-bold tabular-nums" style={{ color: item.color }}>
                   {item.value}
                 </p>
               </div>
             ))}
           </div>
 
-          {/* Tier Stats - compact row */}
-          <div className="mt-3 flex items-center justify-around bg-muted/50 rounded-lg p-2 border border-border/50">
-            <div className="flex items-center gap-1.5 text-center">
-              <span className="text-sm">💎</span>
+          {/* Tier Stats - responsive row */}
+          <div className="mt-2 lg:mt-3 flex items-center justify-around bg-muted/50 rounded-lg p-1.5 lg:p-2 border border-border/50">
+            <div className="flex items-center gap-1 lg:gap-1.5 text-center">
+              <span className="text-xs lg:text-sm">💎</span>
               <span className="text-xs font-bold text-foreground">{stats.diamondNodes}</span>
             </div>
-            <div className="w-px h-4 bg-border/50" />
-            <div className="flex items-center gap-1.5 text-center">
-              <span className="text-sm">🥇</span>
+            <div className="w-px h-3 lg:h-4 bg-border/50" />
+            <div className="flex items-center gap-1 lg:gap-1.5 text-center">
+              <span className="text-xs lg:text-sm">🥇</span>
               <span className="text-xs font-bold text-foreground">{stats.goldNodes}</span>
             </div>
-            <div className="w-px h-4 bg-border/50" />
-            <div className="flex items-center gap-1.5 text-center">
-              <span className="text-sm">✓</span>
+            <div className="w-px h-3 lg:h-4 bg-border/50" />
+            <div className="flex items-center gap-1 lg:gap-1.5 text-center">
+              <span className="text-xs lg:text-sm">✓</span>
               <span className="text-xs font-bold text-foreground">{stats.verifiedNodes}</span>
             </div>
           </div>
 
-          {/* IP Version Stats - compact row */}
-          <div className="mt-2 flex items-center justify-around bg-muted/50 rounded-lg p-2 border border-border/50">
+          {/* IP Version Stats - responsive row */}
+          <div className="mt-1.5 lg:mt-2 flex items-center justify-around bg-muted/50 rounded-lg p-1.5 lg:p-2 border border-border/50">
             <div className="flex flex-col items-center text-center flex-1">
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">IPv4</span>
-              <span className="text-sm font-bold text-foreground">{ipVersionStats.ipv4}</span>
+              <span className="text-xs lg:text-sm font-bold text-foreground">{ipVersionStats.ipv4}</span>
             </div>
-            <div className="w-px h-6 bg-border/50" />
+            <div className="w-px h-5 lg:h-6 bg-border/50" />
             <div className="flex flex-col items-center text-center flex-1">
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">IPv6</span>
-              <span className="text-sm font-bold text-foreground">{ipVersionStats.ipv6}</span>
+              <span className="text-xs lg:text-sm font-bold text-foreground">{ipVersionStats.ipv6}</span>
             </div>
           </div>
         </div>
 
-        {/* Version Distribution - compact */}
+        {/* Version Distribution - responsive */}
         {topVersions.length > 0 && (
           <div className="border-t border-border/50">
             <button
               onClick={() => toggleSection('versions')}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 lg:px-4 lg:py-3 flex items-center justify-between hover:bg-muted/50 transition-all duration-200"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 lg:gap-2">
                 <div className="p-1 rounded" style={{
                   background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`
                 }}>
@@ -194,14 +194,14 @@ export function StatsPanel() {
                 <span className="font-semibold text-xs text-foreground">Versions</span>
               </div>
               {expandedSection === 'versions' ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                <ChevronUp className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground" />
               )}
             </button>
             {expandedSection === 'versions' && (
-              <div className="px-4 pb-3 pt-1">
-                <div className="space-y-2">
+              <div className="px-3 pb-2.5 pt-1 lg:px-4 lg:pb-3">
+                <div className="space-y-1.5 lg:space-y-2">
                   {topVersions.map((version, idx) => (
                     <div key={version.version}>
                       <div className="flex items-center justify-between mb-1">
@@ -236,14 +236,14 @@ export function StatsPanel() {
           </div>
         )}
 
-        {/* Geographic Distribution - compact */}
+        {/* Geographic Distribution - responsive */}
         {topCountries.length > 0 && (
           <div className="border-t border-border/50">
             <button
               onClick={() => toggleSection('countries')}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 lg:px-4 lg:py-3 flex items-center justify-between hover:bg-muted/50 transition-all duration-200"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 lg:gap-2">
                 <div className="p-1 rounded" style={{
                   background: `linear-gradient(135deg, ${theme.secondaryColor}, ${theme.accentColor})`
                 }}>
@@ -252,13 +252,13 @@ export function StatsPanel() {
                 <span className="font-semibold text-xs text-foreground">Countries</span>
               </div>
               {expandedSection === 'countries' ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                <ChevronUp className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground" />
               )}
             </button>
             {expandedSection === 'countries' && (
-              <div className="px-4 pb-3 pt-1 space-y-2">
+              <div className="px-3 pb-2.5 pt-1 lg:px-4 lg:pb-3 space-y-1.5 lg:space-y-2">
                 {topCountries.slice(0, 5).map((country, idx) => (
                   <div key={country.countryCode} className="flex items-center gap-2">
                     <span className="text-base flex-shrink-0">
@@ -303,8 +303,8 @@ export function StatsPanel() {
           </div>
         )}
 
-        {/* Footer - minimal */}
-        <div className="px-4 py-2 border-t border-border/50 bg-muted/30">
+        {/* Footer - responsive */}
+        <div className="px-3 py-1.5 lg:px-4 lg:py-2 border-t border-border/50 bg-muted/30">
           <p className="text-xs text-muted-foreground text-center">
             Updated {new Date(stats.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>

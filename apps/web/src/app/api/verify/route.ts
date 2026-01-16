@@ -7,10 +7,14 @@ import {
   verifyDnsTxt,
   parseSignatureProof,
   isValidAddress,
-  getNetworkConfig
+  getNetworkConfig,
+  VerificationStatus,
+  VerificationMethod,
+  VerificationErrorCode
 } from '@/lib/verification'
 import { rateLimit, RATE_LIMITS } from '@/lib/security'
 import { getChain } from '@atlasp2p/config'
+import { requireTurnstile } from '@/lib/feature-flags.server'
 
 /**
  * Initiate node verification
@@ -25,7 +29,10 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, 'verify:initiate', RATE_LIMITS.VERIFY);
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
-      { error: 'Too many verification attempts. Please try again later.' },
+      {
+        error: 'Too many verification attempts. Please try again later.',
+        code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
+      },
       { status: 429 }
     );
   }
@@ -37,7 +44,10 @@ export async function POST(request: NextRequest) {
 
   if (authError || !user) {
     return NextResponse.json(
-      { error: 'Authentication required' },
+      {
+        error: 'Authentication required',
+        code: VerificationErrorCode.AUTHENTICATION_REQUIRED
+      },
       { status: 401 }
     )
   }
@@ -50,12 +60,21 @@ export async function POST(request: NextRequest) {
   if (!validation.success) {
     const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
     return NextResponse.json(
-      { error: `Validation failed: ${errors}` },
+      {
+        error: `Validation failed: ${errors}`,
+        code: 'VALIDATION_ERROR'
+      },
       { status: 400 }
     )
   }
 
-  const { nodeId, method } = validation.data
+  const { nodeId, method, turnstileToken } = validation.data
+
+  // Verify Turnstile token if protection is enabled for 'verification' action
+  const turnstileError = await requireTurnstile('verification', turnstileToken)
+  if (turnstileError) {
+    return turnstileError
+  }
 
   // Check if node exists
   const { data: node, error: nodeError } = await supabase
@@ -66,7 +85,10 @@ export async function POST(request: NextRequest) {
 
   if (nodeError || !node) {
     return NextResponse.json(
-      { error: 'Node not found' },
+      {
+        error: 'Node not found',
+        code: VerificationErrorCode.NODE_NOT_FOUND
+      },
       { status: 404 }
     )
   }
@@ -78,12 +100,15 @@ export async function POST(request: NextRequest) {
     .select('id')
     .eq('node_id', nodeId)
     .eq('user_id', user.id)
-    .eq('status', 'pending')
+    .eq('status', VerificationStatus.PENDING)
     .single()
 
   if (existingForUser) {
     return NextResponse.json(
-      { error: 'You already have a pending verification for this node' },
+      {
+        error: 'You already have a pending verification for this node',
+        code: 'VERIFICATION_PENDING'
+      },
       { status: 409 }
     )
   }
@@ -97,7 +122,10 @@ export async function POST(request: NextRequest) {
 
   if (alreadyVerified) {
     return NextResponse.json(
-      { error: 'This node is already verified' },
+      {
+        error: 'This node is already verified',
+        code: VerificationErrorCode.ALREADY_VERIFIED
+      },
       { status: 409 }
     )
   }
@@ -115,7 +143,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       method,
       challenge,
-      status: 'pending',
+      status: VerificationStatus.PENDING,
       expires_at: expiresAt.toISOString()
     })
     .select()
@@ -123,7 +151,11 @@ export async function POST(request: NextRequest) {
 
   if (createError) {
     return NextResponse.json(
-      { error: 'Failed to create verification', details: createError.message },
+      {
+        error: 'Failed to create verification',
+        code: VerificationErrorCode.CREATE_FAILED,
+        details: createError.message
+      },
       { status: 500 }
     )
   }
@@ -148,11 +180,11 @@ function generateChallenge(method: string): string {
   switch (method) {
     case 'message_sign':
       return `node-verify:${nonce}`
-    case 'user_agent':
+    case VerificationMethod.USER_AGENT:
       return `NodeVerify:${nonce.substring(0, 8)}`
-    case 'port_check':
+    case VerificationMethod.PORT_CHECK:
       return nonce
-    case 'dns_txt':
+    case VerificationMethod.DNS_TXT:
       return `node-verify=${nonce}`
     default:
       return nonce
@@ -172,11 +204,11 @@ function getVerificationInstructions(
   switch (method) {
     case 'message_sign':
       return `Sign the following message with your node's wallet:\n\n${challenge}\n\nUse: ${cliName} signmessage "<address>" "${challenge}"`
-    case 'user_agent':
+    case VerificationMethod.USER_AGENT:
       return `Add the following to your ${confName} and restart your node:\n\nuseragent=${challenge}\n\nYour node at ${node.ip}:${node.port} will be checked within 24 hours.`
-    case 'port_check':
+    case VerificationMethod.PORT_CHECK:
       return `Ensure your node at ${node.ip}:${node.port} is accessible. We will verify connectivity and respond to our challenge.`
-    case 'dns_txt':
+    case VerificationMethod.DNS_TXT:
       return `Add a DNS TXT record to your domain with this value:\n\n${challenge}\n\nYou can add this to any domain you own (e.g., mynode.example.com or example.com).`
     default:
       return 'Unknown verification method'
@@ -196,7 +228,10 @@ export async function PUT(request: NextRequest) {
   const rateLimitResult = await rateLimit(request, 'verify:complete', RATE_LIMITS.VERIFY);
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
-      { error: 'Too many verification attempts. Please try again later.' },
+      {
+        error: 'Too many verification attempts. Please try again later.',
+        code: VerificationErrorCode.RATE_LIMIT_EXCEEDED
+      },
       { status: 429 }
     );
   }
@@ -207,7 +242,10 @@ export async function PUT(request: NextRequest) {
 
   if (authError || !user) {
     return NextResponse.json(
-      { error: 'Authentication required' },
+      {
+        error: 'Authentication required',
+        code: VerificationErrorCode.AUTHENTICATION_REQUIRED
+      },
       { status: 401 }
     )
   }
@@ -220,12 +258,21 @@ export async function PUT(request: NextRequest) {
   if (!validation.success) {
     const errors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
     return NextResponse.json(
-      { error: `Validation failed: ${errors}` },
+      {
+        error: `Validation failed: ${errors}`,
+        code: 'VALIDATION_ERROR'
+      },
       { status: 400 }
     )
   }
 
-  const { verificationId, proof } = validation.data
+  const { verificationId, proof, turnstileToken } = validation.data
+
+  // Verify Turnstile token if protection is enabled for 'verification' action
+  const turnstileError = await requireTurnstile('verification', turnstileToken)
+  if (turnstileError) {
+    return turnstileError
+  }
 
   // Get the verification
   const { data: verification, error: fetchError } = await supabase
@@ -237,14 +284,20 @@ export async function PUT(request: NextRequest) {
 
   if (fetchError || !verification) {
     return NextResponse.json(
-      { error: 'Verification not found' },
+      {
+        error: 'Verification not found',
+        code: VerificationErrorCode.VERIFICATION_NOT_FOUND
+      },
       { status: 404 }
     )
   }
 
-  if (verification.status !== 'pending') {
+  if (verification.status !== VerificationStatus.PENDING) {
     return NextResponse.json(
-      { error: 'Verification is no longer pending' },
+      {
+        error: 'Verification is no longer pending',
+        code: VerificationErrorCode.INVALID_STATUS
+      },
       { status: 400 }
     )
   }
@@ -252,11 +305,14 @@ export async function PUT(request: NextRequest) {
   if (new Date(verification.expires_at) < new Date()) {
     await supabase
       .from('verifications')
-      .update({ status: 'expired' })
+      .update({ status: VerificationStatus.EXPIRED })
       .eq('id', verificationId)
 
     return NextResponse.json(
-      { error: 'Verification has expired' },
+      {
+        error: 'Verification has expired',
+        code: VerificationErrorCode.VERIFICATION_EXPIRED
+      },
       { status: 410 }
     )
   }
@@ -266,11 +322,14 @@ export async function PUT(request: NextRequest) {
   let errorMessage = '';
 
   switch (verification.method) {
-    case 'message_sign': {
+    case VerificationMethod.MESSAGE_SIGN: {
       // Signature verification requires proof
       if (!proof) {
         return NextResponse.json(
-          { error: 'Signature proof is required for message_sign verification' },
+          {
+            error: 'Signature proof is required for message_sign verification',
+            code: VerificationErrorCode.PROOF_REQUIRED
+          },
           { status: 400 }
         )
       }
@@ -279,7 +338,10 @@ export async function PUT(request: NextRequest) {
       const parsed = parseSignatureProof(proof);
       if (!parsed) {
         return NextResponse.json(
-          { error: 'Invalid proof format. Expected "address:signature"' },
+          {
+            error: 'Invalid proof format. Expected "address:signature"',
+            code: 'INVALID_PROOF_FORMAT'
+          },
           { status: 400 }
         )
       }
@@ -293,7 +355,10 @@ export async function PUT(request: NextRequest) {
       // Validate address format
       if (!isValidAddress(address, networkConfig.addressPrefix)) {
         return NextResponse.json(
-          { error: `Invalid address format. Address should start with '${networkConfig.addressPrefix}'` },
+          {
+            error: `Invalid address format. Address should start with '${networkConfig.addressPrefix}'`,
+            code: VerificationErrorCode.INVALID_ADDRESS
+          },
           { status: 400 }
         )
       }
@@ -313,40 +378,122 @@ export async function PUT(request: NextRequest) {
       break;
     }
 
-    case 'dns_txt': {
+    case VerificationMethod.DNS_TXT: {
       // DNS TXT verification requires proof (domain name)
       if (!proof) {
+        console.warn('[Verification] DNS TXT proof missing', {
+          verificationId,
+          userId: user.id,
+        });
         return NextResponse.json(
-          { error: 'Domain name is required for dns_txt verification' },
+          {
+            error: 'Domain name is required for dns_txt verification',
+            code: 'PROOF_REQUIRED',
+          },
+          { status: 400 }
+        )
+      }
+
+      // Validate domain format to prevent SSRF and DNS rebinding attacks
+      const DOMAIN_REGEX = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
+      const MAX_DOMAIN_LENGTH = 253;
+
+      if (!DOMAIN_REGEX.test(proof) || proof.length > MAX_DOMAIN_LENGTH) {
+        console.warn('[Verification] Invalid DNS domain format', {
+          verificationId,
+          userId: user.id,
+          domain: proof.substring(0, 50), // Log truncated domain for security
+        });
+        return NextResponse.json(
+          {
+            error: 'Invalid domain format. Please provide a valid domain name (e.g., example.com)',
+            code: 'INVALID_DOMAIN_FORMAT',
+          },
+          { status: 400 }
+        )
+      }
+
+      // Prevent localhost/private IP lookups (SSRF protection)
+      const BLOCKED_DOMAINS = [
+        'localhost',
+        '127.0.0.1',
+        '0.0.0.0',
+        '169.254.169.254', // AWS metadata service
+        '169.254', // Link-local
+        '10.', // Private network
+        '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.',
+        '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', // Private network
+        '192.168.', // Private network
+      ];
+
+      const lowerDomain = proof.toLowerCase();
+      if (BLOCKED_DOMAINS.some(blocked => lowerDomain.includes(blocked))) {
+        console.warn('[Verification] Blocked domain attempt (SSRF protection)', {
+          verificationId,
+          userId: user.id,
+          domain: proof,
+        });
+        return NextResponse.json(
+          {
+            error: 'Private/local domains are not allowed for verification',
+            code: 'DOMAIN_BLOCKED',
+          },
           { status: 400 }
         )
       }
 
       // Get the node's IP address
-      const { data: node } = await supabase
+      const { data: node, error: nodeError } = await supabase
         .from('nodes')
         .select('ip')
         .eq('id', verification.node_id)
         .single();
 
-      if (!node) {
+      if (nodeError || !node) {
+        console.error('[Verification] Node not found for DNS verification', {
+          verificationId,
+          nodeId: verification.node_id,
+          error: nodeError?.message,
+        });
         return NextResponse.json(
-          { error: 'Node not found' },
+          {
+            error: 'Node not found',
+            code: 'NODE_NOT_FOUND',
+          },
           { status: 404 }
         )
       }
 
       // Verify DNS TXT record
+      console.info('[Verification] Verifying DNS TXT record', {
+        verificationId,
+        userId: user.id,
+        domain: proof,
+        challenge: verification.challenge.substring(0, 20) + '...',
+      });
+
       const result = await verifyDnsTxt(proof, verification.challenge);
       isValid = result.valid;
       if (!isValid) {
         errorMessage = result.error || 'DNS TXT verification failed';
+        console.warn('[Verification] DNS TXT verification failed', {
+          verificationId,
+          userId: user.id,
+          domain: proof,
+          error: errorMessage,
+        });
+      } else {
+        console.info('[Verification] DNS TXT verification successful', {
+          verificationId,
+          userId: user.id,
+          domain: proof,
+        });
       }
       break;
     }
 
-    case 'user_agent':
-    case 'port_check': {
+    case VerificationMethod.USER_AGENT:
+    case VerificationMethod.PORT_CHECK: {
       // These methods are verified automatically by the crawler
       // Check if crawler has updated the verification status
       // For now, we'll accept the submission and let the crawler verify
@@ -359,7 +506,10 @@ export async function PUT(request: NextRequest) {
 
     default:
       return NextResponse.json(
-        { error: 'Unknown verification method' },
+        {
+          error: 'Unknown verification method',
+          code: 'UNKNOWN_METHOD'
+        },
         { status: 400 }
       )
   }
@@ -369,13 +519,16 @@ export async function PUT(request: NextRequest) {
     await supabase
       .from('verifications')
       .update({
-        status: 'failed',
+        status: VerificationStatus.FAILED,
         verified_at: new Date().toISOString()
       })
       .eq('id', verificationId)
 
     return NextResponse.json(
-      { error: errorMessage || 'Verification failed' },
+      {
+        error: errorMessage || 'Verification failed',
+        code: VerificationErrorCode.VERIFICATION_FAILED
+      },
       { status: 400 }
     )
   }
@@ -384,14 +537,17 @@ export async function PUT(request: NextRequest) {
   const { error: updateError } = await supabase
     .from('verifications')
     .update({
-      status: 'pending_approval', // Require admin approval
+      status: VerificationStatus.PENDING_APPROVAL, // Require admin approval
       verified_at: new Date().toISOString()
     })
     .eq('id', verificationId)
 
   if (updateError) {
     return NextResponse.json(
-      { error: 'Failed to update verification' },
+      {
+        error: 'Failed to update verification',
+        code: VerificationErrorCode.UPDATE_FAILED
+      },
       { status: 500 }
     )
   }
@@ -403,7 +559,7 @@ export async function PUT(request: NextRequest) {
       item_type: 'verification',
       item_id: verificationId,
       user_id: user.id,
-      status: 'pending',
+      status: VerificationStatus.PENDING,
       content_data: {
         node_id: verification.node_id,
         method: verification.method,
@@ -427,13 +583,30 @@ export async function PUT(request: NextRequest) {
  * @returns {Promise<NextResponse>} Pending verification or null
  */
 export async function GET(request: NextRequest) {
+  // Rate limit verification status checks to prevent enumeration attacks
+  const rateLimitResult = await rateLimit(request, 'verify:read', RATE_LIMITS.VERIFY);
+  if (!rateLimitResult.allowed) {
+    console.warn('[Verification] Rate limit exceeded for GET request', {
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+      endpoint: 'verify:read',
+    });
+    return NextResponse.json(
+      {
+        error: 'Too many requests. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED'
+      },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient()
   const searchParams = request.nextUrl.searchParams
   const nodeId = searchParams.get('nodeId')
 
   if (!nodeId) {
+    console.warn('[Verification] GET request missing nodeId parameter');
     return NextResponse.json(
-      { error: 'nodeId is required' },
+      { error: 'nodeId is required', code: 'MISSING_NODE_ID' },
       { status: 400 }
     )
   }
@@ -442,8 +615,11 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (authError || !user) {
+    console.warn('[Verification] GET request unauthorized', {
+      error: authError?.message,
+    });
     return NextResponse.json(
-      { error: 'Authentication required' },
+      { error: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' },
       { status: 401 }
     )
   }
@@ -454,17 +630,32 @@ export async function GET(request: NextRequest) {
     .select('id, method, challenge, expires_at, status')
     .eq('node_id', nodeId)
     .eq('user_id', user.id)
-    .in('status', ['pending', 'pending_approval'])
+    .in('status', [VerificationStatus.PENDING, VerificationStatus.PENDING_APPROVAL])
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
 
   if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+    console.error('[Verification] Failed to query pending verification', {
+      nodeId,
+      userId: user.id,
+      error: error.message,
+      code: error.code,
+    });
     return NextResponse.json(
-      { error: 'Failed to check pending verification' },
+      {
+        error: 'Failed to check pending verification',
+        code: 'DATABASE_ERROR'
+      },
       { status: 500 }
     )
   }
+
+  console.info('[Verification] GET request successful', {
+    nodeId,
+    userId: user.id,
+    hasPending: !!pending,
+  });
 
   return NextResponse.json({
     pending: pending || null
@@ -478,14 +669,41 @@ export async function GET(request: NextRequest) {
  * @returns {Promise<NextResponse>} Success or error
  */
 export async function DELETE(request: NextRequest) {
+  // Rate limit verification cancellation to prevent abuse
+  const rateLimitResult = await rateLimit(request, 'verify:delete', RATE_LIMITS.VERIFY);
+  if (!rateLimitResult.allowed) {
+    console.warn('[Verification] Rate limit exceeded for DELETE request', {
+      ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+      endpoint: 'verify:delete',
+    });
+    return NextResponse.json(
+      {
+        error: 'Too many requests. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED'
+      },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient()
-  const adminClient = createAdminClient() // Use admin client to bypass RLS for delete
+
+  // IMPORTANT: Admin client usage due to missing RLS DELETE policy
+  // Migration 0005_fix_verification_delete_policy.sql adds the missing policy:
+  //   CREATE POLICY "Users can delete own pending verifications"
+  //   ON verifications FOR DELETE USING (auth.uid() = user_id AND status IN ('pending', 'pending_approval'))
+  //
+  // After migration is deployed, this code can be refactored to use regular client:
+  //   const { error } = await supabase.from('verifications').delete().eq('id', verificationId)
+  //
+  // Current approach (pre-migration): Use admin client + manual authorization check
+  const adminClient = createAdminClient()
   const searchParams = request.nextUrl.searchParams
   const verificationId = searchParams.get('verificationId')
 
   if (!verificationId) {
+    console.warn('[Verification] DELETE request missing verificationId parameter');
     return NextResponse.json(
-      { error: 'verificationId is required' },
+      { error: 'verificationId is required', code: 'MISSING_VERIFICATION_ID' },
       { status: 400 }
     )
   }
@@ -494,8 +712,12 @@ export async function DELETE(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (authError || !user) {
+    console.warn('[Verification] DELETE request unauthorized', {
+      error: authError?.message,
+      verificationId,
+    });
     return NextResponse.json(
-      { error: 'Authentication required' },
+      { error: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' },
       { status: 401 }
     )
   }
@@ -508,24 +730,41 @@ export async function DELETE(request: NextRequest) {
     .single()
 
   if (fetchError || !verification) {
-    console.error('Verification fetch error:', fetchError)
+    console.warn('[Verification] Verification not found for deletion', {
+      verificationId,
+      userId: user.id,
+      error: fetchError?.message,
+    });
     return NextResponse.json(
-      { error: 'Verification not found' },
+      { error: 'Verification not found', code: 'VERIFICATION_NOT_FOUND' },
       { status: 404 }
     )
   }
 
   if (verification.user_id !== user.id) {
+    console.warn('[Verification] User attempted to delete another user\'s verification', {
+      verificationId,
+      requestingUserId: user.id,
+      verificationUserId: verification.user_id,
+    });
     return NextResponse.json(
-      { error: 'You can only cancel your own verifications' },
+      { error: 'You can only cancel your own verifications', code: 'FORBIDDEN' },
       { status: 403 }
     )
   }
 
   // Allow canceling pending or pending_approval verifications
-  if (verification.status !== 'pending' && verification.status !== 'pending_approval') {
+  if (verification.status !== VerificationStatus.PENDING && verification.status !== VerificationStatus.PENDING_APPROVAL) {
+    console.warn('[Verification] Attempted to cancel verification with invalid status', {
+      verificationId,
+      userId: user.id,
+      status: verification.status,
+    });
     return NextResponse.json(
-      { error: `Cannot cancel verification with status: ${verification.status}` },
+      {
+        error: `Cannot cancel verification with status: ${verification.status}`,
+        code: 'INVALID_STATUS'
+      },
       { status: 400 }
     )
   }
@@ -537,12 +776,26 @@ export async function DELETE(request: NextRequest) {
     .eq('id', verificationId)
 
   if (error) {
-    console.error('Failed to delete verification:', error)
+    console.error('[Verification] Failed to delete verification', {
+      verificationId,
+      userId: user.id,
+      error: error.message,
+      code: error.code,
+    });
     return NextResponse.json(
-      { error: 'Failed to cancel verification', details: error.message },
+      {
+        error: 'Failed to cancel verification',
+        code: 'DELETE_FAILED',
+        details: error.message
+      },
       { status: 500 }
     )
   }
+
+  console.info('[Verification] Verification cancelled successfully', {
+    verificationId,
+    userId: user.id,
+  });
 
   return NextResponse.json({
     success: true,

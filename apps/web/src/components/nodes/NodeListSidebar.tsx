@@ -199,7 +199,7 @@ export function NodeListSidebar({
         aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 z-[1500] w-full sm:w-[400px] md:w-[500px] lg:w-[600px] bg-card shadow-2xl border-l border-border flex flex-col">
+      <div className="fixed top-14 bottom-0 right-0 z-[1500] w-full sm:w-[400px] md:w-[500px] lg:w-[600px] bg-card shadow-2xl border-l border-border flex flex-col">
       {/* Header */}
       <div
         className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border"

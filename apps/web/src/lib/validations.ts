@@ -31,6 +31,7 @@ export type LeaderboardQuery = z.infer<typeof leaderboardQuerySchema>;
 export const verifyInitiateSchema = z.object({
   nodeId: z.string().uuid('Invalid node ID format'),
   method: z.enum(['message_sign', 'user_agent', 'port_check', 'dns_txt']),
+  turnstileToken: z.string().optional(), // Optional: required only if Turnstile is enabled
 });
 
 export type VerifyInitiate = z.infer<typeof verifyInitiateSchema>;
@@ -38,6 +39,7 @@ export type VerifyInitiate = z.infer<typeof verifyInitiateSchema>;
 export const verifyCompleteSchema = z.object({
   verificationId: z.string().uuid('Invalid verification ID format'),
   proof: z.string().optional(),
+  turnstileToken: z.string().optional(), // Optional: required only if Turnstile is enabled
 });
 
 export type VerifyComplete = z.infer<typeof verifyCompleteSchema>;

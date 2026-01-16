@@ -420,11 +420,13 @@ features:
     enabled: true
     # Available verification methods
     methods:
-      messageSign: true
-      userAgent: false
-      portChallenge: false
-      dnsTxt: true
+      messageSign: true      # ✅ FULLY WORKING - Verify via wallet message signature
+      userAgent: false       # ⚠️ TODO: Crawler verification not implemented - Do not enable
+      portChallenge: false   # ⚠️ TODO: Crawler verification not implemented - Do not enable
+      dnsTxt: true           # ✅ FULLY WORKING - Verify via DNS TXT record
     # Payment requirement (anti-spam)
+    # ⚠️ WARNING: Do not enable requirePayment - feature is not implemented
+    # TODO: Implement blockchain payment tracking before enabling
     requirePayment: false
     paymentAmount: 100
     paymentCurrency: DINGO
@@ -453,18 +455,28 @@ features:
     themeSwitcher: true
 
   turnstile:
-    enabled: true
-    # Site key (public key) - safe to commit
-    siteKey: "0x4AAAAAACHmrULrWXGjnBlP"
+    enabled: false  # Set to true to enable Cloudflare Turnstile bot protection
+
+    # Site key (public key) - choose based on environment:
+    # FOR LOCAL DEV: Use Cloudflare test keys (work on localhost)
+    siteKey: "1x00000000000000000000AA"  # Test key (always passes, invisible)
+    # siteKey: "2x00000000000000000000AB"  # Test key (always passes, visible)
+
+    # FOR PRODUCTION: Use your real key from Cloudflare Dashboard
+    # siteKey: "YOUR_REAL_SITE_KEY_HERE"
+    # Get at: https://dash.cloudflare.com/?to=/:account/turnstile
+
     # IMPORTANT: Secret key goes in .env as TURNSTILE_SECRET_KEY (never commit!)
+    # FOR LOCAL DEV: TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+    # FOR PRODUCTION: TURNSTILE_SECRET_KEY=YOUR_REAL_SECRET_KEY_HERE
+
     # Turnstile widget mode
     mode: invisible  # visible | invisible | managed
     # Actions that require Turnstile verification
+    # ONLY include actions with implemented API endpoints
     protectedActions:
-      - verification
-      - tipping
-      - profile_update
-      - contact
+      - verification  # ✅ IMPLEMENTED: Node ownership verification
+      # Future: tipping, profile_update, contact (APIs not yet implemented)
 
   # System limits and restrictions
   limits:

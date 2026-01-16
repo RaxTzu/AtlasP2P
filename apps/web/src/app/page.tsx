@@ -2,16 +2,26 @@
 
 import dynamic from 'next/dynamic';
 import { Suspense, useState, useEffect, useMemo } from 'react';
-import { Globe, Map, List, Filter, BarChart3 } from 'lucide-react';
+import { Globe, Map, List, Filter, BarChart3, Plus, Minus, Layers } from 'lucide-react';
 import { StatsPanel } from '@/components/stats/StatsPanel';
 import { GrowthMetrics } from '@/components/stats/GrowthMetrics';
 import { FilterPanel } from '@/components/filters/FilterPanel';
 import { DraggablePanel } from '@/components/ui/DraggablePanel';
 import { NodeDetailModal } from '@/components/nodes/NodeDetailModal';
 import { NodeListSidebar } from '@/components/nodes/NodeListSidebar';
-import { getChainConfig, getThemeConfig } from '@/config';
+import { getChainConfig, getThemeConfig, getTileStyles, getDefaultTileStyle, getMapConfig } from '@/config';
 import { useNodes } from '@/hooks/useNodes';
 import type { NodeWithProfile } from '@atlasp2p/types';
+import * as LucideIcons from 'lucide-react';
+
+// Icon mapping for tile style switcher (config-driven)
+function iconNameToComponent(iconName: string): any {
+  const pascalCase = iconName
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+  return (LucideIcons as any)[pascalCase];
+}
 
 // Dynamic import for MapLibre map (handles both 2D and 3D) - lazy loaded for better performance
 const MapLibreMap = dynamic(() => import('@/components/map/MapLibreMap'), {
@@ -30,10 +40,15 @@ export default function HomePage() {
   const chainConfig = getChainConfig();
   const theme = getThemeConfig();
   const chain = chainConfig.ticker.toLowerCase();
+  const mapConfig = getMapConfig();
+  const tileStyles = getTileStyles();
 
   const [viewMode, setViewMode] = useState<'map' | 'globe'>('map');
   const [isClient, setIsClient] = useState(false);
   const [isStatsPanelMinimized, setIsStatsPanelMinimized] = useState(false); // Default: expanded on desktop, minimized on mobile
+  const [mapZoom, setMapZoom] = useState(mapConfig.defaultZoom);
+  const [tileStyle, setTileStyle] = useState(getDefaultTileStyle());
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
 
   const { nodes, isLoading: nodesLoading } = useNodes();
 
@@ -63,6 +78,21 @@ export default function HomePage() {
     }
   }, [viewMode, isClient]);
 
+  // Close style dropdown when clicking outside
+  useEffect(() => {
+    if (!isStyleDropdownOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-style-dropdown]')) {
+        setIsStyleDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isStyleDropdownOpen]);
+
   const handleNodeClick = (node: NodeWithProfile) => {
     setSelectedNode(node);
     setIsModalOpen(true);
@@ -79,6 +109,19 @@ export default function HomePage() {
 
   const handleCloseSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  const handleZoomIn = () => {
+    setMapZoom(prev => Math.min(prev + 1, mapConfig.maxZoom));
+  };
+
+  const handleZoomOut = () => {
+    setMapZoom(prev => Math.max(prev - 1, mapConfig.minZoom));
+  };
+
+  const handleTileStyleChange = (styleId: string) => {
+    setTileStyle(styleId);
+    setIsStyleDropdownOpen(false);
   };
 
   return (
@@ -184,19 +227,99 @@ export default function HomePage() {
         </div>
 
         {/* View Toggle & Actions - Bottom Right, above the mobile/tablet stats bar */}
-        <div className="absolute bottom-20 lg:bottom-4 right-2 sm:right-4 z-[55] flex items-center gap-1.5 sm:gap-2">
+        {/* MOBILE: 48px buttons, 20px icons, 12px gaps | DESKTOP: 40px buttons, 18px icons, 8px gaps */}
+        <div className="absolute bottom-20 lg:bottom-4 right-3 lg:right-4 z-[55] flex items-center gap-3 lg:gap-2">
 
-          {/* Node List Button */}
+          {/* Map Style Dropdown - MOBILE: 48x48px | DESKTOP: 40x40px */}
+          <div className="relative" data-style-dropdown>
+            <button
+              onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
+              className="bg-card/90 backdrop-blur-xl rounded-xl lg:rounded-lg shadow-lg border border-border
+                         w-12 h-12 lg:w-10 lg:h-10
+                         flex items-center justify-center
+                         hover:bg-muted active:bg-muted/80 transition-colors"
+              title="Change map style"
+            >
+              <Layers className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+            </button>
+
+            {/* Style Dropdown Menu */}
+            {isStyleDropdownOpen && (
+              <div className="absolute bottom-full right-0 mb-2 w-56 bg-card/95 backdrop-blur-xl rounded-xl shadow-2xl border border-border overflow-hidden z-[70]">
+                <div className="p-2 space-y-1">
+                  {tileStyles.map((style) => {
+                    const StyleIcon = iconNameToComponent(style.icon);
+                    const isActive = tileStyle === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        onClick={() => handleTileStyleChange(style.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ${
+                          isActive
+                            ? 'text-white'
+                            : 'hover:bg-muted text-foreground'
+                        }`}
+                        style={isActive ? { backgroundColor: theme.primaryColor } : {}}
+                      >
+                        {StyleIcon && <StyleIcon className="h-4 w-4 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{style.name}</p>
+                          <p className={`text-xs truncate ${isActive ? 'text-white/80' : 'text-muted-foreground'}`}>
+                            {style.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Zoom Controls - MOBILE: 48px tall | DESKTOP: 40px tall */}
+          <div className="bg-card/90 backdrop-blur-xl rounded-xl lg:rounded-lg shadow-lg border border-border overflow-hidden
+                          h-12 lg:h-10">
+            <div className="flex h-full">
+              <button
+                onClick={handleZoomIn}
+                disabled={mapZoom >= mapConfig.maxZoom}
+                className="flex items-center justify-center
+                           w-12 lg:w-10
+                           hover:bg-muted active:bg-muted/80 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Zoom in"
+              >
+                <Plus className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+              </button>
+              <div className="w-px bg-border" />
+              <button
+                onClick={handleZoomOut}
+                disabled={mapZoom <= mapConfig.minZoom}
+                className="flex items-center justify-center
+                           w-12 lg:w-10
+                           hover:bg-muted active:bg-muted/80 transition-colors
+                           disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Zoom out"
+              >
+                <Minus className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
+
+          {/* Node List Button - MOBILE: 48x48px | DESKTOP: auto height 40px */}
           <button
             onClick={handleOpenSidebar}
-            className="bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border w-10 h-10 sm:w-auto sm:h-11 sm:px-3 flex items-center justify-center sm:gap-2 hover:bg-muted transition-colors"
+            className="bg-card/90 backdrop-blur-xl rounded-xl lg:rounded-lg shadow-lg border border-border
+                       w-12 h-12 lg:w-auto lg:h-10 lg:px-3
+                       flex items-center justify-center lg:gap-2
+                       hover:bg-muted active:bg-muted/80 transition-colors"
             title="Show node list"
           >
-            <List className="h-4 w-4" />
-            <span className="text-sm font-medium hidden sm:inline">Nodes</span>
+            <List className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+            <span className="text-sm font-medium hidden lg:inline">Nodes</span>
             {!nodesLoading && (
               <span
-                className="hidden sm:inline text-xs text-white px-1.5 py-0.5 rounded-full font-semibold"
+                className="hidden lg:inline text-xs text-white px-1.5 py-0.5 rounded-full font-semibold"
                 style={{ backgroundColor: theme.primaryColor }}
               >
                 {memoizedNodes.length}
@@ -204,32 +327,37 @@ export default function HomePage() {
             )}
           </button>
 
-          {/* Map/Globe Toggle */}
-          <div className="bg-card/90 backdrop-blur-xl rounded-lg shadow-lg border border-border overflow-hidden h-10 sm:h-11">
+          {/* Map/Globe Toggle - MOBILE: 48x48px per button | DESKTOP: 40px height */}
+          <div className="bg-card/90 backdrop-blur-xl rounded-xl lg:rounded-lg shadow-lg border border-border overflow-hidden
+                          h-12 lg:h-10">
             <div className="flex h-full">
               <button
                 onClick={() => setViewMode('map')}
-                className={`flex items-center justify-center w-10 sm:w-auto sm:px-3 sm:gap-2 text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center
+                           w-12 lg:w-auto lg:px-3 lg:gap-2
+                           text-sm font-medium transition-colors ${
                   viewMode === 'map'
                     ? 'text-white'
-                    : 'bg-transparent text-muted-foreground hover:bg-muted'
+                    : 'bg-transparent text-muted-foreground hover:bg-muted active:bg-muted/80'
                 }`}
                 style={viewMode === 'map' ? { backgroundColor: theme.primaryColor } : {}}
               >
-                <Map className="h-4 w-4" />
-                <span className="hidden sm:inline">Map</span>
+                <Map className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+                <span className="hidden lg:inline">Map</span>
               </button>
               <button
                 onClick={() => setViewMode('globe')}
-                className={`flex items-center justify-center w-10 sm:w-auto sm:px-3 sm:gap-2 text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center
+                           w-12 lg:w-auto lg:px-3 lg:gap-2
+                           text-sm font-medium transition-colors ${
                   viewMode === 'globe'
                     ? 'text-white'
-                    : 'bg-transparent text-muted-foreground hover:bg-muted'
+                    : 'bg-transparent text-muted-foreground hover:bg-muted active:bg-muted/80'
                 }`}
                 style={viewMode === 'globe' ? { backgroundColor: theme.primaryColor } : {}}
               >
-                <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">Globe</span>
+                <Globe className="h-5 w-5 lg:h-[18px] lg:w-[18px]" strokeWidth={2.5} />
+                <span className="hidden lg:inline">Globe</span>
               </button>
             </div>
           </div>
@@ -238,13 +366,20 @@ export default function HomePage() {
 
         {/* Map View - MapLibre handles both 2D (pitch=0) and 3D (pitch=60) */}
         <div className="relative h-full w-full">
-          <MapLibreMap viewMode={viewMode} onNodeClick={handleNodeClick} />
+          <MapLibreMap
+            viewMode={viewMode}
+            onNodeClick={handleNodeClick}
+            mapZoom={mapZoom}
+            onZoomChange={setMapZoom}
+            tileStyle={tileStyle}
+            isBottomSheetMinimized={isStatsPanelMinimized}
+          />
         </div>
 
-        {/* Network Info - Bottom Center - Only on larger screens */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[35] hidden md:block pointer-events-none">
-          <div className="bg-card/85 backdrop-blur-xl rounded-lg px-4 py-2 shadow-lg border border-border">
-            <p className="text-sm text-muted-foreground whitespace-nowrap">
+        {/* Network Info - Only on tablet/desktop, positioned on left side away from controls */}
+        <div className="absolute bottom-4 left-4 z-[30] hidden md:block pointer-events-none">
+          <div className="bg-card/85 backdrop-blur-xl rounded-lg px-3 py-1.5 lg:px-4 lg:py-2 shadow-lg border border-border">
+            <p className="text-xs lg:text-sm text-muted-foreground whitespace-nowrap">
               {chainConfig.name} Nodes {viewMode === 'globe' ? 'Globe' : 'Map'} view | Live updates every 30s
             </p>
           </div>

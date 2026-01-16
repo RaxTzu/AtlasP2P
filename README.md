@@ -19,6 +19,7 @@ A professional, production-ready P2P network visualization platform for cryptocu
 - **Interactive Geolocation Map**: Leaflet-powered map with clustering, filtering, and node details
 - **Performance Metrics**: Node tiers (Diamond/Gold/Silver/Bronze) based on uptime, latency, and reliability
 - **Node Verification**: Prove node ownership via message signing, DNS TXT records, or user agent tags
+- **Bot Protection**: Cloudflare Turnstile CAPTCHA for API endpoints (privacy-friendly, invisible verification)
 - **Operator Profiles**: Custom branding with avatars, descriptions, and social links for verified nodes
 
 ## Live Demo
@@ -101,7 +102,7 @@ deployment:
 
 # 3. Add GitHub Variables and Secrets
 # Settings → Secrets and variables → Actions
-DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH, SSH_PRIVATE_KEY
+DEPLOY_USER, SSH_HOST, DEPLOY_PATH, SSH_PRIVATE_KEY
 
 # 3. Push to master - automatic deployment!
 git push origin master

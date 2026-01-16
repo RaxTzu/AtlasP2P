@@ -220,241 +220,43 @@ For automated deployments with CI/CD, see Option 1 above.
    - Database admin UI (optional in production)
    - Port: 4022
 
-## Environment Configuration
+## Production Environment Variables
 
-Production deployments require ~40+ environment variables covering database, authentication, email, and optional services. These can be managed via **AWS SSM**, **GitHub Secrets**, or **manual .env files**.
-
-See [CI/CD Secrets Management](./CICD.md#-secrets-management) for detailed setup instructions for each method.
-
-### Required Environment Variables
-
-AtlasP2P requires the following environment variables for production deployment:
-
-#### Core Configuration (Required)
+### Required for Web App
 
 ```bash
-# Docker Compose
-COMPOSE_PROJECT_NAME=atlasp2p           # Container naming prefix
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Node Environment
-NODE_ENV=production                     # Always 'production' in prod
-
-# Domain & SSL (Required for Caddy SSL)
-DOMAIN=nodes.example.com                # Your production domain
-ACME_EMAIL=admin@example.com            # Email for Let's Encrypt SSL
-
-# Port Configuration (Optional - defaults to 4000)
-PORT=4000                               # Web app port
-WEB_PORT=4000                           # Web app external port
-```
-
-#### Supabase Configuration (Required)
-
-```bash
-# Supabase URLs
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co  # Cloud Supabase
-# OR
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:4020             # Self-hosted
-
-# Supabase Keys
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6...
-
-# Internal URLs (Self-hosted only)
-SUPABASE_URL=http://kong:8000           # Crawler → Supabase
-SUPABASE_INTERNAL_URL=http://kong:8000  # Next.js → Supabase (server-side)
-API_EXTERNAL_URL=http://localhost:4020  # Public API URL
-```
-
-#### Database (Self-hosted mode only)
-
-```bash
-# PostgreSQL Configuration
-POSTGRES_PASSWORD=your-secure-password-here
-POSTGRES_DB=postgres
-
-# JWT Secret (generate: openssl rand -base64 32)
-JWT_SECRET=your-super-secret-jwt-token-with-at-least-32-characters-long
-
-# Cron Secret (generate: openssl rand -hex 32)
-CRON_SECRET=your-super-secret-cron-token-change-in-production-min-32-chars
-```
-
-#### Authentication (GoTrue - Self-hosted only)
-
-```bash
-# Auth URLs
-GOTRUE_SITE_URL=http://localhost:4000           # Web app URL
-GOTRUE_URI_ALLOW_LIST=http://localhost:4000     # Allowed redirect URLs
-
-# Email Configuration (SMTP for auth emails)
-SMTP_HOST=smtp.resend.com                       # SMTP server
-SMTP_PORT=587                                   # SMTP port
-SMTP_USER=resend                                # SMTP username
-SMTP_PASS=re_xxxxx                              # SMTP password (Resend API key)
-SMTP_ADMIN_EMAIL=admin@example.com              # From address
-SMTP_SENDER_NAME=AtlasP2P                       # From name
-
-# Email Testing (Dev only)
-GOTRUE_MAILER_AUTOCONFIRM=false                 # Auto-confirm emails (dev: true)
-```
-
-#### Email Service (Application emails)
-
-**Choose ONE provider** (configured in `project.config.yaml`):
-
-```bash
-# Option 1: Resend (Recommended - https://resend.com)
-RESEND_API_KEY=re_xxxxx
-
-# Option 2: SendGrid (Alternative - https://sendgrid.com)
-SENDGRID_API_KEY=SG.xxxxx
-
-# Option 3: Custom SMTP (if using 'smtp' provider)
-SMTP_USER=your-smtp-username
-SMTP_PASSWORD=your-smtp-password
-SMTP_TLS=true
-```
-
-**Note:** GoTrue auth emails (signup/password reset) use `SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS` above. Application custom emails use the provider configured in `project.config.yaml`.
-
-#### Security (Optional but recommended)
-
-```bash
-# Cloudflare Turnstile (Bot protection)
-# Get keys at: https://dash.cloudflare.com/turnstile
+# Cloudflare Turnstile (Bot Protection) - REQUIRED if enabled in config
+# Get keys at: https://dash.cloudflare.com/?to=/:account/turnstile
 TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+# Note: Site key goes in config/project.config.yaml (not .env)
+# See docs/TURNSTILE_SETUP.md for complete guide
 
-# Admin Users (Comma-separated emails)
-ADMIN_EMAILS=admin@example.com,owner@example.com
+# Optional: Custom domain
+DOMAIN=nodes.dingocoin.com
+ACME_EMAIL=admin@dingocoin.com
 ```
 
-#### GeoIP (Optional - MaxMind GeoLite2)
+### Required for Crawler
 
 ```bash
-# MaxMind credentials (free account at maxmind.com)
-MAXMIND_ACCOUNT_ID=123456
-MAXMIND_LICENSE_KEY=xxxxxx
+# Supabase (same as web app)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# GeoIP database path (defaults to /app/data/geoip)
-GEOIP_DB_PATH=/app/data/geoip
+# GeoIP (auto-downloads if credentials provided)
+MAXMIND_ACCOUNT_ID=your-account-id
+MAXMIND_LICENSE_KEY=your-license-key
+
+# Crawler settings (optional, has defaults)
+CRAWLER_INTERVAL_MINUTES=5
+MAX_CONCURRENT_CONNECTIONS=100
+CONNECTION_TIMEOUT_SECONDS=10
 ```
-
-#### Crawler Configuration (Optional - has defaults)
-
-```bash
-# Crawler behavior
-CRAWLER_INTERVAL_MINUTES=5              # Crawl every 5 minutes
-MAX_CONCURRENT_CONNECTIONS=100          # Max parallel connections
-CONNECTION_TIMEOUT_SECONDS=10           # Connection timeout
-
-# Optional: RPC connection to local node
-# RPC_HOST=host.docker.internal         # Use 172.17.0.1 on Linux
-# RPC_PORT=8332
-# RPC_USER=rpcuser
-# RPC_PASS=rpcpassword
-```
-
-#### Docker Registry (Auto-injected by CI/CD)
-
-These variables are **automatically injected** by the deployment workflow. You don't set these manually - they're shown for reference:
-
-```bash
-# GitHub Container Registry (GHCR)
-REGISTRY_TYPE=ghcr
-REGISTRY_PUBLIC=true
-REGISTRY=ghcr.io/your-org
-IMAGE_PREFIX=atlasp2p-
-IMAGE_TAG=latest
-
-# OR AWS Elastic Container Registry (ECR)
-REGISTRY_TYPE=ecr
-REGISTRY_PUBLIC=false
-REGISTRY_REGION=us-east-1
-REGISTRY=123456789.dkr.ecr.us-east-1.amazonaws.com
-IMAGE_PREFIX=atlasp2p/
-IMAGE_TAG=latest
-```
-
-See [CI/CD Registry Configuration](./CICD.md#-docker-registry-configuration) for details.
-
-### Secrets Management Decision Tree
-
-Choose the best secrets management method for your deployment:
-
-```
-Do you have AWS infrastructure?
-├─ Yes → Use AWS SSM
-│         ✓ Centralized management
-│         ✓ Encrypted at rest
-│         ✓ Audit logging
-│         → See: scripts/setup-ssm.sh
-│
-└─ No → Are you a solo developer?
-         ├─ Yes → Use GitHub Secrets
-         │         ✓ Simple setup
-         │         ✓ No external dependencies
-         │         → See: scripts/setup-github-secrets.sh
-         │
-         └─ No (team without AWS) → GitHub Secrets or Manual
-                   ✓ GitHub: Centralized in repo
-                   ✓ Manual: Full control
-                   → See: docs/CICD.md#secrets-management
-```
-
-**Quick start:**
-- **Teams with AWS:** Run `./scripts/setup-ssm.sh`
-- **Solo developers:** Run `./scripts/setup-github-secrets.sh`
-- **Testing/dev:** Create `.env` manually on server
-
-### Security Best Practices
-
-1. **SecureString encryption** (AWS SSM):
-   - Always use `--type SecureString` for sensitive parameters
-   - Encrypt with AWS KMS for additional security
-   - Enable CloudTrail for audit logging
-
-2. **IAM permissions** (AWS SSM):
-   - Use least-privilege access (only `ssm:GetParameter`)
-   - Restrict to specific parameter paths
-   - Rotate access keys regularly
-
-3. **Secret rotation**:
-   - Rotate database passwords quarterly
-   - Rotate JWT secrets annually
-   - Update service role keys after team changes
-   - Use new SMTP credentials for each environment
-
-4. **GitHub Secrets**:
-   - Never commit secrets to git
-   - Use environment protection rules
-   - Require reviewers for production deployments
-   - Audit secret access logs
-
-5. **Server security** (Manual .env):
-   - Set file permissions: `chmod 600 .env`
-   - Restrict SSH access
-   - Use firewall rules (UFW/iptables)
-   - Keep server updated
-
-### Template Files
-
-Use these template files as references:
-
-- **Self-hosted Docker:** `.env.docker.example` (40 variables)
-- **Cloud Supabase:** `.env.cloud.example` (25 variables)
-- **Development:** `.env.example` (minimal required)
-
-### Helper Scripts
-
-AtlasP2P provides helper scripts for secrets management:
-
-| Script | Purpose | Location |
-|--------|---------|----------|
-| `setup-ssm.sh` | Interactive AWS SSM setup | `scripts/setup-ssm.sh` |
-| `setup-github-secrets.sh` | Generate GitHub Secrets from .env | `scripts/setup-github-secrets.sh` |
-
-**Note:** These scripts are coming soon. For now, follow the manual setup instructions in [CI/CD Guide](./CICD.md#-secrets-management).
 
 ## Deployment Mode Decision
 

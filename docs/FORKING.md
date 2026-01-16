@@ -174,6 +174,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbG...
 
+# Cloudflare Turnstile (optional - for bot protection)
+# For local dev: Use test key that works on localhost
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# For production: Get real key at dash.cloudflare.com
+# See docs/TURNSTILE_SETUP.md for complete guide
+
 # MaxMind GeoIP (get from maxmind.com)
 MAXMIND_ACCOUNT_ID=123456
 MAXMIND_LICENSE_KEY=xxxxx
@@ -575,7 +581,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DEPLOY_USER` | SSH username | `ubuntu` |
-| `DEPLOY_HOST` | Server hostname/IP | `nodes.yourcoin.org` |
+| `SSH_HOST` | Server hostname/IP | `nodes.yourcoin.org` |
 | `DEPLOY_PATH` | App path on server | `/opt/atlasp2p` |
 
 **Deploy Workflow - Required Secrets**
@@ -694,7 +700,7 @@ AWS_REGION=us-east-1
 2. **Add GitHub Variables** (Settings → Secrets and variables → Actions → Variables):
 ```bash
 DEPLOY_USER=ubuntu
-DEPLOY_HOST=nodes.yourcoin.com
+SSH_HOST=nodes.yourcoin.com
 DEPLOY_PATH=/opt/atlasp2p
 ```
 
@@ -969,7 +975,7 @@ themeConfig:
 **CI/CD Setup:**
 - [ ] Verify CI workflow runs on your fork (automatic)
 - [ ] Configure deployment in `config/project.config.yaml`
-- [ ] Set GitHub Variables (DEPLOY_USER, DEPLOY_HOST, DEPLOY_PATH)
+- [ ] Set GitHub Variables (DEPLOY_USER, SSH_HOST, DEPLOY_PATH)
 - [ ] Set GitHub Secret (SSH_PRIVATE_KEY)
 - [ ] Choose and configure secrets source (AWS SSM / GitHub Secrets / manual)
 - [ ] Choose registry (GHCR or ECR) in project.config.yaml

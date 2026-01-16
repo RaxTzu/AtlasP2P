@@ -401,16 +401,17 @@ body {
   }
 }
 
-/* MapLibre NavigationControl theme-aware styles */
-.maplibregl-ctrl-bottom-left {
-  bottom: 80px !important; /* Align with map style switcher (bottom-20 = 5rem = 80px) */
-  left: 10px !important; /* Default: left-aligned on mobile/tablet */
+/* MapLibre NavigationControl theme-aware styles - positioned bottom-right */
+.maplibregl-ctrl-bottom-right {
+  bottom: 70px !important; /* Above the view toggle buttons on mobile */
+  right: 10px !important;
 }
 
-/* On desktop (lg:), shift right to avoid Map Style switcher overlap */
+/* On desktop (lg:), position higher to clear view toggle */
 @media (min-width: 1024px) {
-  .maplibregl-ctrl-bottom-left {
-    left: 200px !important;
+  .maplibregl-ctrl-bottom-right {
+    bottom: 70px !important; /* Above view toggle */
+    right: 16px !important;
   }
 }
 

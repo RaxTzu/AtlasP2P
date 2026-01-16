@@ -162,51 +162,51 @@ export function NodeDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-card rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-border"
+        className="bg-card rounded-t-xl sm:rounded-xl shadow-2xl w-full sm:max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className="px-6 py-4 border-b border-border"
+          className="px-4 sm:px-6 py-3 sm:py-4 border-b border-border"
           style={{
             background: `linear-gradient(135deg, ${theme.primaryColor}15 0%, transparent 100%)`,
           }}
         >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">{tierEmojis[node.tier]}</span>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <span className="text-2xl sm:text-3xl flex-shrink-0">{tierEmojis[node.tier]}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${tierColors[node.tier]}`}
+                      className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-semibold ${tierColors[node.tier]}`}
                     >
                       {category?.name || 'Standard Node'}
                     </span>
                     {node.isVerified && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/10 text-success text-xs font-medium">
-                        <Shield className="h-3 w-3" />
+                      <span className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-success/10 text-success text-[10px] sm:text-xs font-medium">
+                        <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         Verified
                       </span>
                     )}
                     <span
-                      className={`h-2 w-2 rounded-full ${getStatusColor(node.status)}`}
+                      className={`h-2 w-2 rounded-full flex-shrink-0 ${getStatusColor(node.status)}`}
                       title={`Status: ${node.status}`}
                     />
                   </div>
                   {node.displayName ? (
-                    <div>
-                      <h2 className="text-2xl font-bold">{node.displayName}</h2>
-                      <p className="text-sm text-muted-foreground font-mono">
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-2xl font-bold truncate">{node.displayName}</h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground font-mono truncate">
                         {node.address}
                       </p>
                     </div>
                   ) : (
-                    <h2 className="text-xl font-bold font-mono">
+                    <h2 className="text-sm sm:text-xl font-bold font-mono break-all">
                       {node.address}
                     </h2>
                   )}
@@ -214,31 +214,31 @@ export function NodeDetailModal({
               </div>
 
               {/* Connection Status - Bitnodes style */}
-              <div className="mt-3 pt-3 border-t border-border/50">
-                <div className="flex items-center justify-center gap-2">
-                  <span className={`text-xs font-bold uppercase tracking-wide ${getStatusTextColor(node.status)}`}>
+              <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/50">
+                <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap text-center">
+                  <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide ${getStatusTextColor(node.status)}`}>
                     {getStatusLabel(node.status)}
                   </span>
-                  <span className="text-xs text-muted-foreground">-</span>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">
-                    {node.status === 'reachable' ? 'TCP only (handshake failed)' : `Connected since ${connectionDuration}`}
+                  <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">-</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                    {node.status === 'reachable' ? 'TCP only' : `Since ${connectionDuration}`}
                   </span>
                 </div>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors flex-shrink-0"
               aria-label="Close modal"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="overflow-y-auto flex-1 p-3 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Connection Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -557,40 +557,42 @@ export function NodeDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-border bg-muted/30">
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => copyToClipboard(node.address)}
-              className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-sm font-medium transition-colors"
-            >
-              <Copy className="h-4 w-4" />
-              {copied ? 'Copied!' : 'Copy Address'}
-            </button>
-            <a
-              href={`${chainConfig.explorerUrl}/address/${node.address}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-sm font-medium transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View in Explorer
-            </a>
-            {node.tipsEnabled && (
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-border bg-muted/30">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <button
-                onClick={() => setIsTipModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white"
-                style={{ backgroundColor: theme.primaryColor }}
+                onClick={() => copyToClipboard(node.address)}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none"
               >
-                <Coins className="h-4 w-4" />
-                Send Tip
+                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                {copied ? 'Copied!' : 'Copy'}
               </button>
-            )}
-            <div className="flex-1" />
+              <a
+                href={`${chainConfig.explorerUrl}/address/${node.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-xs sm:text-sm font-medium transition-colors flex-1 sm:flex-none"
+              >
+                <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Explorer
+              </a>
+              {node.tipsEnabled && (
+                <button
+                  onClick={() => setIsTipModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors text-white flex-1 sm:flex-none"
+                  style={{ backgroundColor: theme.primaryColor }}
+                >
+                  <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Tip
+                </button>
+              )}
+            </div>
+            <div className="hidden sm:block flex-1" />
             <a
               href={`/node/${node.id}`}
-              className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto"
             >
-              <Globe className="h-4 w-4" />
+              <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Full Profile
             </a>
           </div>

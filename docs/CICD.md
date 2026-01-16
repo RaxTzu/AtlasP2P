@@ -78,7 +78,7 @@ sudo usermod -aG docker $USER
 
 ```bash
 DEPLOY_USER=ubuntu              # SSH username
-DEPLOY_HOST=nodes.example.com   # Server IP or domain
+SSH_HOST=nodes.example.com      # Server IP or domain
 DEPLOY_PATH=/opt/atlasp2p       # Deployment directory on server
 ```
 
@@ -143,274 +143,81 @@ git push
 
 ---
 
-## 🔐 Secrets Management
+## 🔐 Secrets Management Options
 
-AtlasP2P's deployment workflow supports **three secrets management methods** to handle environment variables. The workflow automatically detects which method to use based on available credentials, or you can explicitly configure it.
+AtlasP2P supports **three secrets management methods**:
 
-### Overview
+### Option 1: AWS Parameter Store (Recommended for teams)
 
-The deployment needs ~40+ environment variables including:
-- Supabase credentials (URL, anon key, service role key)
-- Database secrets (passwords, JWT secrets)
-- Email provider credentials (Resend, SendGrid, or SMTP)
-- Domain configuration (for SSL)
-- Optional services (Turnstile, MaxMind GeoIP, RPC)
-
-See [Production Deployment Guide](./PRODUCTION_DEPLOYMENT.md#environment-configuration) for the complete list of required variables.
-
-### Option 1: AWS Systems Manager Parameter Store (Recommended for Teams)
-
-**Best for:** Teams, enterprise deployments, multi-environment setups
-
-**Pros:**
-- ✅ Centralized secret management
-- ✅ Encrypted at rest (KMS)
-- ✅ Audit logging (CloudTrail)
-- ✅ Version control for secrets
-- ✅ IAM-based access control
-- ✅ Easy secret rotation
-
-**Setup Steps:**
-
-1. **Prepare your .env file** with all production secrets (see [complete variable list](./PRODUCTION_DEPLOYMENT.md#required-environment-variables))
-
-2. **Upload to AWS SSM using helper script:**
+**Setup:**
+1. Store entire .env file as single SecureString parameter in AWS SSM
+2. Configure GitHub secrets:
    ```bash
-   # Run the setup helper (interactive)
-   ./scripts/setup-ssm.sh
-
-   # Or manually:
-   aws ssm put-parameter \
-     --name "/atlasp2p/prod/env" \
-     --type "SecureString" \
-     --value "$(cat .env)" \
-     --region us-east-1
+   AWS_ACCESS_KEY_ID=AKIA...
+   AWS_SECRET_ACCESS_KEY=...
    ```
-
-3. **Configure GitHub Secrets** (Repository → Settings → Secrets and variables → Actions → Secrets):
+3. Configure GitHub variables:
    ```bash
-   AWS_ACCESS_KEY_ID=AKIA...           # IAM user with SSM read permissions
-   AWS_SECRET_ACCESS_KEY=...           # Secret access key
+   AWS_REGION=us-east-1
    ```
-
-4. **Configure GitHub Variables** (Repository → Settings → Secrets and variables → Actions → Variables):
-   ```bash
-   AWS_REGION=us-east-1                # Your AWS region
-   SSM_PARAM_NAME=/atlasp2p/prod/env   # Parameter name in SSM
-   ```
-
-5. **Update `config/project.config.yaml`:**
+4. Update `project.config.yaml`:
    ```yaml
-   deployment:
-     secrets:
-       source: aws-ssm                 # Use SSM
-       ssmPath: /atlasp2p/prod/env     # Must match SSM_PARAM_NAME
+   secrets:
+     source: aws-ssm
+     ssmPath: /atlasp2p/prod/env
    ```
 
-**IAM Permissions Required:**
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetParameter",
-        "ssm:GetParameters"
-      ],
-      "Resource": "arn:aws:ssm:us-east-1:*:parameter/atlasp2p/prod/env"
-    }
-  ]
-}
-```
-
-**Helper Script:** `scripts/setup-ssm.sh` - Interactive setup wizard
-
-### Option 2: GitHub Secrets (Easiest for Solo Developers)
-
-**Best for:** Solo developers, simple deployments, quick setup
-
-**Pros:**
-- ✅ No external dependencies
-- ✅ Quick setup
-- ✅ Free
-- ✅ Integrated with GitHub Actions
-
-**Cons:**
-- ❌ Manual entry for 40+ variables
-- ❌ No centralized rotation
-- ❌ Harder to audit
-
-**Setup Steps:**
-
-1. **Use helper script** for guided setup:
-   ```bash
-   ./scripts/setup-github-secrets.sh
-   ```
-
-   This script reads your local `.env` file and generates instructions for adding all secrets to GitHub.
-
-2. **Or manually add secrets** (Repository → Settings → Secrets and variables → Actions → Secrets):
-
-   Add ALL environment variables from `.env.docker.example` as individual GitHub Secrets:
-   - `DOMAIN=nodes.example.com`
-   - `ACME_EMAIL=admin@example.com`
-   - `NEXT_PUBLIC_SUPABASE_URL=...`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY=...`
-   - `SUPABASE_SERVICE_ROLE_KEY=...`
-   - `POSTGRES_PASSWORD=...`
-   - `JWT_SECRET=...`
-   - ... (see [full list](./PRODUCTION_DEPLOYMENT.md#required-environment-variables))
-
-3. **Update `config/project.config.yaml`:**
-   ```yaml
-   deployment:
-     secrets:
-       source: github-secrets
-   ```
-
-**Note:** The workflow will automatically inject all repository secrets into the `.env` file on the server.
-
-**Helper Script:** `scripts/setup-github-secrets.sh` - Generates GitHub Secrets from .env file
-
-### Option 3: Manual .env (For Testing/Development)
-
-**Best for:** Testing deployments, development servers, quick experiments
-
-**Pros:**
-- ✅ Simple
-- ✅ Full control
-- ✅ No cloud dependencies
-
-**Cons:**
-- ❌ Manual updates required
-- ❌ Less secure (secrets on server filesystem)
-- ❌ No version control
-
-**Setup Steps:**
-
-1. **SSH to your server and create `.env` file:**
-   ```bash
-   ssh user@your-server.com
-   cd /opt/atlasp2p  # Your DEPLOY_PATH
-   nano .env
-   ```
-
-2. **Add all required environment variables** (see `.env.docker.example` for template)
-
-3. **Update `config/project.config.yaml`:**
-   ```yaml
-   deployment:
-     secrets:
-       source: manual
-   ```
-
-4. **The workflow will skip secrets management** and use the existing `.env` file
-
-**Security Note:** Ensure `.env` file has restricted permissions:
+**Upload secrets to SSM:**
 ```bash
-chmod 600 .env
-chown $USER:$USER .env
+# Create .env file with all secrets
+aws ssm put-parameter \
+  --name "/atlasp2p/prod/env" \
+  --type "SecureString" \
+  --value "$(cat .env)" \
+  --region us-east-1
 ```
 
-### Auto-Detection Logic
+### Option 2: GitHub Secrets (Easiest for solo developers)
 
-If you set `secrets.source: auto` in `project.config.yaml`, the workflow automatically chooses:
-
-```
-Priority 1: AWS SSM
-  ✓ Check if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY exist
-  ✓ Check if SSM_PARAM_NAME variable exists
-  → Use aws-ssm
-
-Priority 2: GitHub Secrets
-  ✓ Check if DOMAIN secret exists (indicator that secrets are configured)
-  → Use github-secrets
-
-Priority 3: Manual
-  → Assume .env file exists on server
-  → Skip secrets management
-```
-
-### Required GitHub Configuration
-
-All three methods require these **GitHub Variables** (Settings → Secrets and variables → Actions → Variables):
-
+**Setup:**
+Add ALL environment variables as GitHub Secrets:
 ```bash
-DEPLOY_USER=ubuntu                  # SSH username
-DEPLOY_HOST=nodes.example.com       # Server IP or domain
-DEPLOY_PATH=/opt/atlasp2p           # Deployment directory
+DOMAIN=nodes.example.com
+ACME_EMAIL=admin@example.com
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+TURNSTILE_SECRET_KEY=...  # Cloudflare Turnstile (if enabled)
+POSTGRES_PASSWORD=...
+JWT_SECRET=...
+SMTP_HOST=...
+SMTP_PASS=...
+CHAIN_RPC_PASSWORD=...
+ADMIN_EMAILS=...
 ```
 
-And this **GitHub Secret**:
-
-```bash
-SSH_PRIVATE_KEY=<your-private-key>  # SSH key for server access
-```
-
-**Additional variables for specific methods:**
-
-| Variable | Required For | Description |
-|----------|--------------|-------------|
-| `AWS_REGION` | AWS SSM | AWS region (e.g., us-east-1) |
-| `SSM_PARAM_NAME` | AWS SSM | Parameter name (e.g., /atlasp2p/prod/env) |
-
-**Additional secrets for specific methods:**
-
-| Secret | Required For | Description |
-|--------|--------------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS SSM | IAM user access key |
-| `AWS_SECRET_ACCESS_KEY` | AWS SSM | IAM user secret key |
-| All env vars | GitHub Secrets | 40+ individual secrets |
-
-### Switching Between Methods
-
-You can switch methods at any time by updating `config/project.config.yaml` and committing:
-
+**Configure:**
 ```yaml
-# Switch from GitHub Secrets to AWS SSM
-deployment:
-  secrets:
-    source: aws-ssm        # Changed from github-secrets
-    ssmPath: /atlasp2p/prod/env
+secrets:
+  source: github-secrets
 ```
 
-The next deployment will automatically use the new method.
+### Option 3: Manual .env (For testing)
 
-### Troubleshooting
+**Setup:**
+1. Create `.env` file directly on server at `DEPLOY_PATH`
+2. Workflow will skip secrets management
+3. Configure:
+   ```yaml
+   secrets:
+     source: manual
+   ```
 
-#### "Failed to fetch secrets from AWS SSM"
-
-**Check:**
-- AWS credentials are valid: `aws sts get-caller-identity`
-- Parameter exists: `aws ssm get-parameter --name /atlasp2p/prod/env --region us-east-1`
-- IAM permissions include `ssm:GetParameter`
-- Region matches between `AWS_REGION` variable and `ssmPath`
-
-#### "DOMAIN not set" (GitHub Secrets mode)
-
-**Fix:**
-- Verify all secrets are added in GitHub UI (Settings → Secrets)
-- Check secret names match exactly (case-sensitive)
-- Re-run workflow
-
-#### "No .env file found" (Manual mode)
-
-**Fix:**
+**On server:**
 ```bash
-# SSH to server and create .env
-ssh user@server
 cd /opt/atlasp2p
-nano .env
-# Add all required variables
+nano .env  # Add all secrets manually
 ```
-
-#### "Secrets contain invalid characters"
-
-**Fix:**
-- Avoid special characters in secret values (especially `$`, `"`, `'`, `\`)
-- For SSM: Ensure file is valid UTF-8 before upload
-- For GitHub: Use base64 encoding for complex secrets if needed
 
 ---
 
@@ -1091,7 +898,7 @@ notifications:
 
 - [ ] Fork AtlasP2P repository
 - [ ] Edit `config/project.config.yaml` (deployment section)
-- [ ] Add GitHub Variables: `DEPLOY_USER`, `DEPLOY_HOST`, `DEPLOY_PATH`
+- [ ] Add GitHub Variables: `DEPLOY_USER`, `SSH_HOST`, `DEPLOY_PATH`
 - [ ] Add GitHub Secret: `SSH_PRIVATE_KEY`
 - [ ] Choose secrets method and configure (SSM / GitHub Secrets / manual)
 - [ ] Commit config: `git add -f config/project.config.yaml && git commit`

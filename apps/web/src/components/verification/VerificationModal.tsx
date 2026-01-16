@@ -50,7 +50,7 @@ export function VerificationModal({
   const theme = getThemeConfig();
   const chainConfig = getChainConfig();
   const enabledMethods = useVerificationMethods();
-  const requiresTurnstile = useTurnstileProtection('verify');
+  const requiresTurnstile = useTurnstileProtection('verification');
 
   const [step, setStep] = useState<'select' | 'pending' | 'challenge' | 'proof' | 'complete'>('select');
   const [verification, setVerification] = useState<VerificationStep>({
@@ -404,7 +404,7 @@ export function VerificationModal({
 
       // Include Turnstile token if required
       if (requiresTurnstile && turnstileToken) {
-        body['cf-turnstile-response'] = turnstileToken;
+        body.turnstileToken = turnstileToken;
       }
 
       const response = await fetch('/api/verify', {
@@ -455,7 +455,7 @@ export function VerificationModal({
 
       // Include Turnstile token if required
       if (requiresTurnstile && turnstileToken) {
-        body['cf-turnstile-response'] = turnstileToken;
+        body.turnstileToken = turnstileToken;
       }
 
       const response = await fetch('/api/verify', {

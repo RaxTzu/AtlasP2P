@@ -285,30 +285,30 @@ export function GrowthMetrics() {
       />
 
       <div className="relative">
-        {/* Header with Period Selector - compact for sidebar */}
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2 min-w-0">
+        {/* Header with Period Selector - responsive */}
+        <div className="px-3 pt-3 pb-2.5 lg:px-4 lg:pt-4 lg:pb-3">
+          <div className="flex items-center justify-between gap-2 mb-2.5 lg:mb-3">
+            <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
               <div
-                className="p-2 rounded-lg shadow-md flex-shrink-0"
+                className="p-1.5 lg:p-2 rounded-lg shadow-md flex-shrink-0"
                 style={{
                   background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
                 }}
               >
-                <TrendingUp className="h-4 w-4 text-white" />
+                <TrendingUp className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-white" />
               </div>
               <div className="min-w-0">
                 <h2 className="text-sm font-bold text-foreground truncate">Network Growth</h2>
               </div>
             </div>
 
-            {/* Period Selector - compact */}
+            {/* Period Selector - responsive */}
             <div className="flex gap-0.5 bg-muted/50 rounded-md p-0.5 border border-border/50 flex-shrink-0">
               {(['24h', '7d', '30d'] as TimePeriod[]).map((period) => (
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-2 py-1 text-xs font-semibold rounded transition-all duration-200 ${
+                  className={`px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs font-semibold rounded transition-all duration-200 ${
                     selectedPeriod === period
                       ? 'text-white shadow-sm'
                       : 'text-muted-foreground hover:bg-muted'
@@ -321,8 +321,8 @@ export function GrowthMetrics() {
             </div>
           </div>
 
-          {/* Growth Metrics Grid - 2x2 compact layout for sidebar */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Growth Metrics Grid - responsive 2x2 layout */}
+          <div className="grid grid-cols-2 gap-1.5 lg:gap-2">
             {metrics.map((metric) => {
               const IconComponent = metric.icon;
               const trendColor = metric.isPositive ? '#22c55e' : '#ef4444';
@@ -331,12 +331,12 @@ export function GrowthMetrics() {
               return (
                 <div
                   key={metric.label}
-                  className="relative overflow-hidden rounded-lg bg-muted/50 p-3 border border-border/50 transition-all duration-200 hover:bg-muted/70 group"
+                  className="relative overflow-hidden rounded-lg bg-muted/50 p-2.5 lg:p-3 border border-border/50 transition-all duration-200 hover:bg-muted/70 group"
                 >
-                  {/* Compact header - icon and label inline */}
-                  <div className="flex items-center gap-2 mb-2">
+                  {/* Header - icon and label - responsive */}
+                  <div className="flex items-center gap-1.5 lg:gap-2 mb-1.5 lg:mb-2">
                     <div
-                      className="p-1.5 rounded-md flex-shrink-0"
+                      className="p-1 lg:p-1.5 rounded-md flex-shrink-0"
                       style={{ backgroundColor: `${theme.primaryColor}20`, color: theme.primaryColor }}
                     >
                       <IconComponent className="h-3.5 w-3.5" />
@@ -346,12 +346,12 @@ export function GrowthMetrics() {
                     </p>
                   </div>
 
-                  {/* Value */}
-                  <p className="text-xl font-bold text-foreground tabular-nums mb-1">
+                  {/* Value - responsive */}
+                  <p className="text-lg lg:text-xl font-bold text-foreground tabular-nums mb-1">
                     {metric.currentValue.toLocaleString()}
                   </p>
 
-                  {/* Change indicator - compact */}
+                  {/* Change indicator - responsive */}
                   <div className="flex items-center gap-1 flex-wrap">
                     <TrendIcon className="h-3 w-3 flex-shrink-0" style={{ color: trendColor }} />
                     <span className="text-xs font-semibold" style={{ color: trendColor }}>
@@ -366,8 +366,8 @@ export function GrowthMetrics() {
             })}
           </div>
 
-          {/* Footer Info - compact */}
-          <div className="mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground">
+          {/* Footer Info - responsive */}
+          <div className="mt-2 lg:mt-3 pt-1.5 lg:pt-2 border-t border-border/30 text-xs text-muted-foreground">
             <span>vs {selectedPeriod === '24h' ? '12h' : selectedPeriod === '7d' ? '3.5d' : '15d'} ago</span>
           </div>
         </div>

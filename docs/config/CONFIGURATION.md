@@ -711,11 +711,47 @@ features:
 
 ### Verification Features
 
+```yaml
+verification:
+  enabled: true
+  methods:
+    messageSign: true      # ✅ IMPLEMENTED
+    userAgent: false       # ⚠️ Partial (no crawler verification yet)
+    portChallenge: false   # ⚠️ Partial (no crawler verification yet)
+    dnsTxt: true           # ✅ IMPLEMENTED
+  requirePayment: false    # 🚫 NOT IMPLEMENTED - Do not enable
+  paymentAmount: 100
+  paymentCurrency: DINGO
+  challengeExpiryHours: 24
+  autoApprove: false
+```
+
 - **`enabled`** - Enable node ownership verification system
-- **`messageSign`** - Allow verification via message signing
-- **`userAgent`** - Allow verification via custom user agent
-- **`portChallenge`** - Allow verification via port challenge
-- **`dnsTxt`** - Allow verification via DNS TXT record
+- **`methods.messageSign`** - ✅ **FULLY WORKING** - Verify via wallet message signature
+  - User signs challenge with wallet: `dingocoin-cli signmessage "address" "challenge"`
+  - Uses chain-specific crypto verification (message prefix, address format)
+  - Most secure method - proves control of private keys
+- **`methods.dnsTxt`** - ✅ **FULLY WORKING** - Verify via DNS TXT record
+  - User adds TXT record to domain: `node-verify=abc123...`
+  - System queries DNS to verify record exists
+  - Good for users with domains but no wallet access
+- **`methods.userAgent`** - ⚠️ **PARTIAL** - Custom user agent verification
+  - User adds to node config: `useragent=NodeVerify:abc123`
+  - Frontend accepts submission, but crawler doesn't verify yet
+  - **Do not enable** until crawler verification is implemented
+- **`methods.portChallenge`** - ⚠️ **PARTIAL** - Port connectivity challenge
+  - Crawler connects to node and sends challenge
+  - Frontend accepts submission, but crawler doesn't verify yet
+  - **Do not enable** until crawler verification is implemented
+- **`requirePayment`** - 🚫 **NOT IMPLEMENTED** - Anti-spam payment requirement
+  - **CRITICAL: Do not enable** - feature is non-functional
+  - Intended to require blockchain payment before verification
+  - No payment monitoring or transaction verification implemented
+  - TODO: Implement blockchain payment tracking
+- **`paymentAmount`** - Amount required if requirePayment is true (not functional)
+- **`paymentCurrency`** - Currency ticker for payment (not functional)
+- **`challengeExpiryHours`** - Hours before verification challenge expires (default: 24)
+- **`autoApprove`** - Auto-approve verifications (false = requires admin approval)
 
 ### Tipping Features
 
@@ -732,6 +768,89 @@ features:
 
 - **`darkMode`** - Enable dark mode toggle
 - **`themeSwitcher`** - Show theme/style switcher
+
+### Turnstile (Bot Protection)
+
+```yaml
+turnstile:
+  enabled: true  # Enable Cloudflare Turnstile CAPTCHA
+  siteKey: "0x4AAAAAACHmrULrWXGjnBlP"  # Public site key (safe to commit)
+  mode: invisible  # Widget appearance mode
+  protectedActions:
+    - verification  # Protect node verification endpoint
+```
+
+**What is Turnstile?** Cloudflare Turnstile is a privacy-friendly CAPTCHA alternative that protects your API endpoints from bots and automated abuse without degrading user experience.
+
+**Configuration:**
+
+- **`enabled`** - Enable/disable Turnstile protection
+  - **Default**: `false` (disabled)
+  - **Set to `true`** to enable bot protection
+  - Requires site key and secret key (see Environment Variables below)
+
+- **`siteKey`** - Cloudflare Turnstile site key (public)
+  - **Safe to commit** to version control
+  - **Get yours**: [Cloudflare Turnstile Dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
+  - Example: `"0x4AAAAAACHmrULrWXGjnBlP"`
+
+- **`mode`** - Widget appearance mode
+  - **`invisible`** (recommended) - No visible widget, runs in background
+  - **`visible`** - Shows checkbox challenge
+  - **`managed`** - Cloudflare decides when to show challenge
+
+- **`protectedActions`** - API endpoints requiring Turnstile verification
+  - **`verification`** - ✅ **IMPLEMENTED** - Protects `/api/verify` endpoint
+  - **Future**: `tipping`, `profile_update`, `contact` (APIs not implemented yet)
+  - **Only include actions with implemented API endpoints**
+
+**Environment Variables Required:**
+
+Add to your `.env` file (NEVER commit):
+```bash
+# Production keys (domain restricted)
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAACHmrULrWXGjnBlP
+TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+
+# OR for local development (test keys that always pass)
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+
+**Development vs Production Keys:**
+
+- **Production Keys**: Get from [Cloudflare Dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
+  - Requires domain whitelisting (add your domain in Cloudflare)
+  - Will fail on localhost unless you whitelist it
+  - Use for production deployment
+
+- **Test Keys** (Cloudflare provided): Work on localhost without whitelisting
+  - `1x00000000000000000000AA` (always passes, visible)
+  - `2x00000000000000000000AB` (always passes, invisible)
+  - `3x00000000000000000000FF` (always fails)
+  - Use for local development only
+
+**How it Works:**
+
+1. User triggers protected action (e.g., verification request)
+2. Frontend shows Turnstile widget (if `mode=visible`) or runs silently
+3. Turnstile validates user is human, returns token
+4. Frontend sends token with API request
+5. Backend verifies token with Cloudflare API
+6. If valid, request proceeds; if invalid, returns 403 error
+
+**Best Practices:**
+
+- Use `invisible` mode for better UX
+- Only protect high-risk endpoints (verification, payments)
+- Monitor Turnstile analytics in Cloudflare Dashboard
+- Rotate secret keys periodically
+
+**Free Tier Limits:**
+
+- Unlimited verifications
+- Analytics and reporting
+- Multiple sites allowed
 
 ---
 
@@ -792,11 +911,21 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 MAXMIND_ACCOUNT_ID=your-account-id
 MAXMIND_LICENSE_KEY=your-license-key
 
+# Cloudflare Turnstile (Bot Protection) - REQUIRED if features.turnstile.enabled=true
+TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE  # NEVER commit this!
+
 # Optional: Crawler Configuration
 CRAWLER_INTERVAL_MINUTES=5
 MAX_CONCURRENT_CONNECTIONS=100
 CONNECTION_TIMEOUT_SECONDS=10
 ```
+
+**Turnstile Setup:**
+1. Create account at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile)
+2. Add your domain/localhost
+3. Copy **Site Key** → paste in `project.config.yaml` under `features.turnstile.siteKey`
+4. Copy **Secret Key** → paste in `.env` as `TURNSTILE_SECRET_KEY` (NEVER commit!)
+5. Set `features.turnstile.enabled: true` in `project.config.yaml`
 
 ### Why These Aren't in YAML
 

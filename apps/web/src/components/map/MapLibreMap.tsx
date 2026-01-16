@@ -4,12 +4,12 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from 'next-themes';
-import Map, { Marker, NavigationControl, MapRef, Popup } from 'react-map-gl/maplibre';
+import Map, { Marker, MapRef, Popup } from 'react-map-gl/maplibre';
 import type { ViewStateChangeEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // @ts-ignore - supercluster doesn't have types but works fine
 import Supercluster from 'supercluster';
-import { Sun, Map as MapIcon, Moon } from 'lucide-react';
+import { Sun, Map as MapIcon, Moon, ChevronDown, Layers, Plus, Minus } from 'lucide-react';
 import { useNodes } from '@/hooks/useNodes';
 import { getTileStyles, getDefaultTileStyle, getMapConfig, getThemeConfig } from '@/config';
 import { getTierColor, getTierIcon } from '@/lib/theme-colors';
@@ -38,6 +38,12 @@ function iconNameToComponent(iconName: string): any {
 interface MapLibreMapProps {
   viewMode: 'map' | 'globe';
   onNodeClick?: (node: NodeWithProfile) => void;
+  isBottomSheetMinimized?: boolean;
+  bottomSheetHeight?: number;
+  isDraggingSheet?: boolean;
+  tileStyle?: string;
+  mapZoom?: number;
+  onZoomChange?: (zoom: number) => void;
 }
 
 interface ClusterFeature {
@@ -95,7 +101,16 @@ interface MetaClusterState {
   totalCount: number;
 }
 
-export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps) {
+export default function MapLibreMap({
+  viewMode,
+  onNodeClick,
+  isBottomSheetMinimized = true,
+  bottomSheetHeight = 48,
+  isDraggingSheet = false,
+  tileStyle: propTileStyle,
+  mapZoom: propMapZoom,
+  onZoomChange
+}: MapLibreMapProps) {
   const { nodes, isLoading, error } = useNodes();
   const mapRef = useRef<MapRef>(null);
   const { resolvedTheme } = useTheme();
@@ -119,40 +134,31 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
   const mapConfig = getMapConfig();
   const theme = getThemeConfig();
 
-  const [tileStyle, setTileStyle] = useState(defaultTileStyle);
+  const tileStyle = propTileStyle || defaultTileStyle;
   const [isClient, setIsClient] = useState(false);
 
-  // View state for map
+  // View state for map - use prop zoom if provided
   const [viewState, setViewState] = useState({
     longitude: mapConfig.defaultCenter[1],
     latitude: mapConfig.defaultCenter[0],
-    zoom: mapConfig.defaultZoom,
+    zoom: propMapZoom || mapConfig.defaultZoom,
     pitch: 0,
     bearing: 0,
     transitionDuration: 1000,
   });
 
+  // Sync viewState zoom with prop zoom
+  useEffect(() => {
+    if (propMapZoom !== undefined && propMapZoom !== viewState.zoom) {
+      setViewState(prev => ({ ...prev, zoom: propMapZoom }));
+    }
+  }, [propMapZoom]);
+
   // Track mounted state
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  // Load tileStyle from localStorage on client mount
-  useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem(`atlasp2p-${viewMode}-tile-style`);
-    const isValid = saved && tileStyles.some(style => style.id === saved);
-    if (isValid && saved) {
-      setTileStyle(saved);
-    }
-  }, [tileStyles, viewMode]);
-
-  // Persist tileStyle to localStorage
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem(`atlasp2p-${viewMode}-tile-style`, tileStyle);
-    }
-  }, [tileStyle, isClient, viewMode]);
+  }, []);
 
   // Reset pitch and bearing when switching to globe to prevent tilt
   useEffect(() => {
@@ -636,43 +642,6 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
 
   return (
     <div className="h-full w-full relative">
-      {/* Map Style Switcher - Bottom Left (Desktop only - hidden when bottom sheet is visible) */}
-      <div className="hidden lg:block absolute bottom-20 left-4 z-[1000] bg-card/85 backdrop-blur-xl rounded-lg shadow-lg p-3 border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-        <div
-          className="text-sm font-semibold text-muted-foreground px-0 py-2 mb-2"
-          id="map-style-label"
-        >
-          Map Style
-        </div>
-        <div
-          className="flex flex-col gap-2"
-          role="group"
-          aria-labelledby="map-style-label"
-        >
-          {tileStyles.map((style) => {
-            const IconComponent = style.icon ? THEME_ICONS[style.icon] : null;
-            return (
-              <button
-                key={style.id}
-                type="button"
-                onClick={() => setTileStyle(style.id)}
-                aria-label={`Map Style: ${style.name}`}
-                aria-current={tileStyle === style.id ? 'true' : undefined}
-                title={style.description || `Switch to ${style.name} view`}
-                className={`px-4 py-2.5 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 flex items-center gap-2 ${
-                  tileStyle === style.id
-                    ? 'bg-primary text-white shadow-md font-semibold'
-                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {IconComponent && <IconComponent className="h-4 w-4" />}
-                <span>{style.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <Map
         ref={mapRef}
         {...viewState}
@@ -684,6 +653,10 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
             setMetaClusterState(null);
           }
           setViewState({ ...evt.viewState, transitionDuration: 1000 });
+          // Notify parent of zoom change
+          if (onZoomChange && evt.viewState.zoom !== viewState.zoom) {
+            onZoomChange(evt.viewState.zoom);
+          }
         }}
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
@@ -697,7 +670,7 @@ export default function MapLibreMap({ viewMode, onNodeClick }: MapLibreMapProps)
         pitchWithRotate={false}
         touchPitch={false}
       >
-        <NavigationControl position="bottom-left" showCompass={false} />
+        {/* Using custom zoom controls instead of NavigationControl */}
 
         {/* Cluster Markers */}
         {clusterFeatures.map((clusterFeature) => {

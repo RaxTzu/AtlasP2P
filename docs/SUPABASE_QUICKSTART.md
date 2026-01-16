@@ -237,6 +237,10 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 DOMAIN=nodes.yourdomain.com
 ACME_EMAIL=admin@yourdomain.com
 
+# Cloudflare Turnstile (optional - for bot protection)
+# Get real key at: https://dash.cloudflare.com/?to=/:account/turnstile
+TURNSTILE_SECRET_KEY=YOUR_REAL_SECRET_KEY_HERE
+
 # Production SMTP
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587

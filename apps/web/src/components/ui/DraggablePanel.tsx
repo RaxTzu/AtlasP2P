@@ -153,9 +153,9 @@ export function DraggablePanel({
       'top-right': 'top-4 right-4',
       'middle-left': 'top-1/2 -translate-y-1/2 left-[21rem]',
       'middle-right': 'top-1/2 -translate-y-1/2 right-4',
-      'bottom-left': 'bottom-4 left-[21rem]',
-      'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
-      'bottom-right': 'bottom-4 right-4',
+      'bottom-left': 'bottom-24 left-[21rem]', // Above map controls
+      'bottom-center': 'bottom-24 left-1/2 -translate-x-1/2', // Above map controls
+      'bottom-right': 'bottom-24 right-4', // Above map controls
     };
     return positions[position];
   };

@@ -44,19 +44,20 @@ export function FilterPanel() {
       }} />
 
       <div className="relative">
-        {/* Header - more compact */}
+        {/* Header - responsive */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-muted/50 transition-all duration-200 group"
+          data-drag-handle
+          className="w-full flex items-center justify-between px-3 py-2.5 lg:px-4 lg:py-3 hover:bg-muted/50 transition-all duration-200 group cursor-move"
         >
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg" style={{
+          <div className="flex items-center gap-1.5 lg:gap-2">
+            <div className="p-1.5 lg:p-2 rounded-lg shadow-md" style={{
               background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
             }}>
-              <Filter className="h-3.5 w-3.5 text-white" />
+              <Filter className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-foreground">Filters</span>
+              <span className="font-bold text-sm text-foreground">Filters</span>
               {hasActiveFilters && (
                 <span className="px-1.5 py-0.5 text-white text-xs rounded-full font-semibold" style={{
                   backgroundColor: theme.primaryColor
@@ -67,15 +68,15 @@ export function FilterPanel() {
             </div>
           </div>
           {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <ChevronUp className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <ChevronDown className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           )}
         </button>
 
-        {/* Filters Content - compact */}
+        {/* Filters Content - responsive */}
         {isExpanded && (
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-3">
+          <div className="px-3 pb-2.5 lg:px-4 lg:pb-3 space-y-2.5 lg:space-y-3">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -118,12 +119,12 @@ export function FilterPanel() {
               </div>
             </div>
 
-            {/* Tier - 2x3 grid with icons and labels */}
+            {/* Tier - 2x3 grid with icons and labels - responsive */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 Tier
               </label>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 lg:gap-2">
                 {tierOptions.map((option) => {
                   const isActive = (filters.tier || 'all') === option.value;
                   const IconComponent = option.icon;

@@ -489,6 +489,12 @@ MAXMIND_LICENSE_KEY=your-license-key
 ### Optional Variables
 
 ```bash
+# Cloudflare Turnstile (Bot Protection)
+# For local dev: Use test key that works on localhost
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# For production: Get real key at dash.cloudflare.com
+# See docs/TURNSTILE_SETUP.md for complete guide
+
 # Crawler configuration
 CRAWLER_INTERVAL_MINUTES=5
 MAX_CONCURRENT_CONNECTIONS=100
