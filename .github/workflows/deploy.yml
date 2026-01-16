@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       secrets_source: ${{ steps.detect.outputs.secrets_source }}
+      ssm_param_name: ${{ steps.detect.outputs.ssm_param_name }}
       backup_enabled: ${{ steps.detect.outputs.backup_enabled }}
       rollback_enabled: ${{ steps.detect.outputs.rollback_enabled }}
       health_check_enabled: ${{ steps.detect.outputs.health_check_enabled }}
@@ -55,6 +56,7 @@ jobs:
           fi
 
           SECRETS_SOURCE=$(yq '.deployment.secrets.source // "auto"' $CONFIG_FILE)
+          SSM_PARAM_PATH=$(yq '.deployment.secrets.ssmPath // ""' $CONFIG_FILE)
           # NOTE: REGISTRY_TYPE now comes from SSM/deployment.env, not project.config.yaml
           # This ensures SSM is the single source of truth for ALL runtime config
           BACKUP_ENABLED=$(yq '.deployment.backup.enabled // true' $CONFIG_FILE)
@@ -62,9 +64,15 @@ jobs:
           HEALTH_CHECK_ENABLED=$(yq '.deployment.healthCheck.enabled // true' $CONFIG_FILE)
           DEPLOYMENT_MODE=$(yq '.deployment.mode // "self-hosted-docker"' $CONFIG_FILE)
 
+          # Determine SSM parameter name (prefer GitHub var, fallback to config)
+          SSM_PARAM_NAME="${{ vars.SSM_PARAM_NAME }}"
+          if [ -z "$SSM_PARAM_NAME" ]; then
+            SSM_PARAM_NAME="$SSM_PARAM_PATH"
+          fi
+
           # Auto-detect secrets source if set to "auto"
           if [ "$SECRETS_SOURCE" = "auto" ]; then
-            if [ -n "${{ vars.SSM_PARAM_NAME }}" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            if [ -n "$SSM_PARAM_NAME" ] && [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
               echo "Auto-detected: AWS SSM Parameter Store"
               SECRETS_SOURCE="aws-ssm"
             elif [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
@@ -77,6 +85,7 @@ jobs:
           fi
 
           echo "secrets_source=$SECRETS_SOURCE" >> $GITHUB_OUTPUT
+          echo "ssm_param_name=$SSM_PARAM_NAME" >> $GITHUB_OUTPUT
           echo "backup_enabled=$BACKUP_ENABLED" >> $GITHUB_OUTPUT
           echo "rollback_enabled=$ROLLBACK_ENABLED" >> $GITHUB_OUTPUT
           echo "health_check_enabled=$HEALTH_CHECK_ENABLED" >> $GITHUB_OUTPUT
@@ -106,9 +115,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
         run: |
-          echo "Fetching secrets from SSM: ${{ vars.SSM_PARAM_NAME }}"
+          echo "Fetching secrets from SSM: ${{ needs.detect-config.outputs.ssm_param_name }}"
           aws ssm get-parameter \
-            --name "${{ vars.SSM_PARAM_NAME }}" \
+            --name "${{ needs.detect-config.outputs.ssm_param_name }}" \
             --with-decryption \
             --query 'Parameter.Value' \
             --output text > deployment.env
