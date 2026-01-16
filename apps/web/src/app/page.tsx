@@ -15,7 +15,8 @@ import type { NodeWithProfile } from '@atlasp2p/types';
 import * as LucideIcons from 'lucide-react';
 
 // Icon mapping for tile style switcher (config-driven)
-function iconNameToComponent(iconName: string): any {
+function iconNameToComponent(iconName: string | undefined): any {
+  if (!iconName) return null;
   const pascalCase = iconName
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
