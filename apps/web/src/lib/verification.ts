@@ -377,29 +377,33 @@ export async function verifyMessageSignature(
 }
 
 /**
- * Verify DNS TXT record contains the challenge
+ * Verify DNS TXT record contains the challenge AND domain resolves to node IP
  *
- * Uses DNS-over-HTTPS (Google Public DNS) to check TXT records
+ * Uses DNS-over-HTTPS (Google Public DNS) to check TXT records and A/AAAA records
+ *
+ * SECURITY: This validates BOTH domain ownership (TXT) AND node control (IP resolution)
  *
  * @param domain - The domain to check
  * @param challenge - The expected TXT record value
+ * @param nodeIp - The node's IP address that domain must resolve to
  * @returns Verification result
  */
 export async function verifyDnsTxt(
   domain: string,
-  challenge: string
+  challenge: string,
+  nodeIp: string
 ): Promise<VerificationResult> {
   try {
     // Validate inputs
-    if (!domain || !challenge) {
+    if (!domain || !challenge || !nodeIp) {
       return {
         valid: false,
-        error: 'Missing required parameters: domain or challenge',
+        error: 'Missing required parameters: domain, challenge, or nodeIp',
       };
     }
 
-    // Use DNS-over-HTTPS (Google Public DNS)
-    const response = await fetch(
+    // Step 1: Check TXT record (proves domain ownership)
+    const txtResponse = await fetch(
       `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=TXT`,
       {
         headers: {
@@ -408,17 +412,17 @@ export async function verifyDnsTxt(
       }
     );
 
-    if (!response.ok) {
+    if (!txtResponse.ok) {
       return {
         valid: false,
-        error: 'Failed to query DNS records',
+        error: 'Failed to query DNS TXT records',
       };
     }
 
-    const data = await response.json();
+    const txtData = await txtResponse.json();
 
     // Check if we have TXT records
-    if (!data.Answer || !Array.isArray(data.Answer)) {
+    if (!txtData.Answer || !Array.isArray(txtData.Answer)) {
       return {
         valid: false,
         error: 'No TXT records found for this domain',
@@ -426,16 +430,84 @@ export async function verifyDnsTxt(
     }
 
     // Look for our challenge in the TXT records
-    const found = data.Answer.some((record: any) => {
+    const txtFound = txtData.Answer.some((record: any) => {
       if (record.type !== 16) return false; // 16 = TXT record
       // TXT records are quoted, remove quotes
       const txtValue = record.data.replace(/"/g, '');
       return txtValue === challenge;
     });
 
+    if (!txtFound) {
+      return {
+        valid: false,
+        error: 'Challenge not found in DNS TXT records',
+      };
+    }
+
+    // Step 2: Resolve domain to IP addresses (proves node control)
+    const resolvedIps: string[] = [];
+
+    // Query A records (IPv4)
+    const ipv4Response = await fetch(
+      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`,
+      {
+        headers: {
+          Accept: 'application/dns-json',
+        },
+      }
+    );
+
+    if (ipv4Response.ok) {
+      const ipv4Data = await ipv4Response.json();
+      if (ipv4Data.Answer && Array.isArray(ipv4Data.Answer)) {
+        ipv4Data.Answer.forEach((record: any) => {
+          if (record.type === 1) { // 1 = A record
+            resolvedIps.push(record.data);
+          }
+        });
+      }
+    }
+
+    // Query AAAA records (IPv6)
+    const ipv6Response = await fetch(
+      `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=AAAA`,
+      {
+        headers: {
+          Accept: 'application/dns-json',
+        },
+      }
+    );
+
+    if (ipv6Response.ok) {
+      const ipv6Data = await ipv6Response.json();
+      if (ipv6Data.Answer && Array.isArray(ipv6Data.Answer)) {
+        ipv6Data.Answer.forEach((record: any) => {
+          if (record.type === 28) { // 28 = AAAA record
+            resolvedIps.push(record.data);
+          }
+        });
+      }
+    }
+
+    // Check if domain resolves to any IP
+    if (resolvedIps.length === 0) {
+      return {
+        valid: false,
+        error: `Domain ${domain} does not resolve to any IP address`,
+      };
+    }
+
+    // Check if domain resolves to the node's IP
+    if (!resolvedIps.includes(nodeIp)) {
+      return {
+        valid: false,
+        error: `Domain ${domain} resolves to ${resolvedIps.join(', ')} but node IP is ${nodeIp}`,
+      };
+    }
+
+    // Both checks passed!
     return {
-      valid: found,
-      error: found ? undefined : 'Challenge not found in DNS TXT records',
+      valid: true,
     };
   } catch (error) {
     return {

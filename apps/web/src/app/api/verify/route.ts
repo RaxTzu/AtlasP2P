@@ -335,6 +335,24 @@ export async function PUT(request: NextRequest) {
 
   switch (verification.method) {
     case VerificationMethod.MESSAGE_SIGN: {
+      /**
+       * SECURITY NOTE: Message signature verification proves cryptographic ownership
+       * of a wallet address, but does NOT directly prove control of the node.
+       *
+       * This method assumes the user either:
+       * 1. Has RPC access to the node to generate the signature
+       * 2. Runs the wallet on the node machine
+       * 3. Will be validated by admin approval process
+       *
+       * For stronger proof of node control, consider requiring:
+       * - user_agent + message_sign (combined verification)
+       * - port_check + message_sign (combined verification)
+       * - Admin verification of operator identity
+       *
+       * Unlike DNS TXT (which now validates domain→IP resolution),
+       * message signing relies on social trust and admin approval.
+       */
+
       // Signature verification requires proof
       if (!proof) {
         return NextResponse.json(
@@ -476,15 +494,16 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      // Verify DNS TXT record
-      console.info('[Verification] Verifying DNS TXT record', {
+      // Verify DNS TXT record AND IP resolution (SECURITY FIX)
+      console.info('[Verification] Verifying DNS TXT record and IP resolution', {
         verificationId,
         userId: user.id,
         domain: proof,
+        nodeIp: node.ip,
         challenge: verification.challenge.substring(0, 20) + '...',
       });
 
-      const result = await verifyDnsTxt(proof, verification.challenge);
+      const result = await verifyDnsTxt(proof, verification.challenge, node.ip);
       isValid = result.valid;
       if (!isValid) {
         errorMessage = result.error || 'DNS TXT verification failed';

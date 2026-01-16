@@ -525,7 +525,7 @@ export function VerificationModal({
       case 'message_sign':
         return 'Sign a message with your node wallet private key (most secure)';
       case 'dns_txt':
-        return 'Add a TXT record to your domain pointing to this node';
+        return 'Verify domain ownership and node control via DNS records';
       case 'user_agent':
         return 'Set a custom user agent string in your node configuration';
       case 'port_challenge':
@@ -849,41 +849,78 @@ export function VerificationModal({
               )}
 
               {verification.method === 'dns_txt' && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
-                      1
+                <div className="space-y-6">
+                  {/* Step 1: Configure DNS A Record */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
+                        1
+                      </div>
+                      <h3 className="font-semibold text-lg">Configure DNS A Record</h3>
                     </div>
-                    <h3 className="font-semibold text-lg">Add DNS TXT Record</h3>
-                  </div>
 
-                  <div className="ml-11 space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Add this TXT record to your domain&apos;s DNS settings:
-                    </p>
+                    <div className="ml-11 space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Your domain <strong>must resolve to the node IP address</strong>. Add an A record:
+                      </p>
 
-                    <div className="relative group">
-                      <div className="p-4 bg-muted/50 rounded-xl border-2 border-border">
-                        <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
-                          <span className="text-muted-foreground">Type:</span>
-                          <span className="font-mono">TXT</span>
-                          <span className="text-muted-foreground">Host:</span>
-                          <span className="font-mono">@ or _atlasp2p</span>
-                          <span className="text-muted-foreground">Value:</span>
-                          <span className="font-mono break-all">{verification.challenge}</span>
+                      <div className="relative group">
+                        <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                          <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="font-mono font-semibold">A</span>
+                            <span className="text-muted-foreground">Host:</span>
+                            <span className="font-mono">@ or subdomain</span>
+                            <span className="text-muted-foreground">Value:</span>
+                            <span className="font-mono font-semibold">{nodeIp}</span>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={handleCopyChallenge}
-                        className="absolute top-2 right-2 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-all duration-200"
-                        title="Copy value"
-                      >
-                        {copySuccess ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Copy className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
+
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>Required: Domain verification will fail if your domain does not resolve to {nodeIp}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Add TXT Record */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
+                        2
+                      </div>
+                      <h3 className="font-semibold text-lg">Add DNS TXT Record</h3>
+                    </div>
+
+                    <div className="ml-11 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Add this TXT record to your domain&apos;s DNS settings:
+                      </p>
+
+                      <div className="relative group">
+                        <div className="p-4 bg-muted/50 rounded-xl border-2 border-border">
+                          <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="font-mono">TXT</span>
+                            <span className="text-muted-foreground">Host:</span>
+                            <span className="font-mono">@ or _atlasp2p</span>
+                            <span className="text-muted-foreground">Value:</span>
+                            <span className="font-mono break-all">{verification.challenge}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleCopyChallenge}
+                          className="absolute top-2 right-2 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-all duration-200"
+                          title="Copy value"
+                        >
+                          {copySuccess ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -926,7 +963,7 @@ export function VerificationModal({
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
-                    2
+                    {verification.method === 'dns_txt' ? '3' : '2'}
                   </div>
                   <h3 className="font-semibold text-lg">Submit Your Proof</h3>
                 </div>

@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Get the verification (using admin client to bypass RLS)
+  // Get the verification with node details (using admin client to bypass RLS)
   const { data: verification, error: fetchError } = await adminClient
     .from('verifications')
-    .select('*')
+    .select('*, nodes!inner(ip, port)')
     .eq('id', verificationId)
     .eq('user_id', user.id)
     .single()
@@ -84,8 +84,17 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Check DNS TXT record
-  const result = await verifyDnsTxt(domain, verification.challenge)
+  // Get node IP
+  const nodeIp = verification.nodes?.ip || verification.nodes?.[0]?.ip;
+  if (!nodeIp) {
+    return NextResponse.json(
+      { error: 'Node IP not found' },
+      { status: 500 }
+    )
+  }
+
+  // Check DNS TXT record AND IP resolution (SECURITY FIX)
+  const result = await verifyDnsTxt(domain, verification.challenge, nodeIp)
 
   if (!result.valid) {
     return NextResponse.json({
