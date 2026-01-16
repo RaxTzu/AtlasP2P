@@ -227,9 +227,8 @@ export default function LeaderboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+      {/* Header */}
+      <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2.5 rounded-xl shadow-lg" style={{
               background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
@@ -436,7 +435,6 @@ export default function LeaderboardPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

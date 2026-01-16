@@ -95,7 +95,7 @@ export function Tooltip({ content, children, position = 'top', delay = 300 }: To
       {isVisible && (
         <div
           ref={tooltipRef}
-          className={`absolute ${getPosition()} left-1/2 -translate-x-1/2 z-50 animate-fade-in-scale pointer-events-none`}
+          className={`absolute ${getPosition()} left-1/2 -translate-x-1/2 z-[999] animate-fade-in-scale pointer-events-none`}
           style={{
             animation: 'fadeInScale 0.15s ease-out'
           }}

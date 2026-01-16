@@ -113,15 +113,8 @@ function StatCard({
   const trendColor = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280';
 
   return (
-    <div className="group relative glass-strong rounded-2xl p-6 shadow-lg border border-border/50 hover:shadow-2xl hover:border-border transition-all duration-300 overflow-hidden">
-      <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: `radial-gradient(circle at top right, ${color}10, transparent 70%)`
-        }}
-      />
-
-      <div className="relative z-10">
+    <div className="group relative glass-strong rounded-2xl p-6 shadow-lg border border-border/50 hover:shadow-2xl hover:border-border transition-all duration-300">
+      <div className="relative">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div
@@ -173,11 +166,6 @@ function StatCard({
           </div>
         )}
       </div>
-
-      <div
-        className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl opacity-20 group-hover:opacity-30 transition-opacity"
-        style={{ backgroundColor: color }}
-      />
     </div>
   );
 }
@@ -284,23 +272,10 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Ambient gradients */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-20 animate-pulse"
-          style={{ backgroundColor: theme.primaryColor, animationDuration: '8s' }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full blur-3xl opacity-15 animate-pulse"
-          style={{ backgroundColor: theme.secondaryColor, animationDuration: '10s' }}
-        />
-      </div>
-
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
+    <div className="min-h-screen relative">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <div
@@ -317,7 +292,7 @@ export default function DashboardPage() {
                     Network Dashboard
                     <LivePulse color={theme.primaryColor} size={10} />
                   </h1>
-                  <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2">
+                  <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2" suppressHydrationWarning>
                     <Clock className="h-3 w-3" />
                     Last updated {lastUpdate.toLocaleTimeString()}
                     {autoRefresh && <span className="text-xs">(auto-refresh)</span>}
@@ -612,7 +587,6 @@ export default function DashboardPage() {
               </div>
             </>
           )}
-        </div>
       </div>
     </div>
   );

@@ -26,6 +26,28 @@ const CustomTooltip = memo(({ active, payload, label }: any) => {
 });
 CustomTooltip.displayName = 'CustomTooltip';
 
+// Memoized custom legend - shows colored text labels
+const CustomLegend = memo(({ payload }: any) => {
+  if (!payload || !payload.length) return null;
+
+  return (
+    <div className="flex justify-center gap-6 mt-3">
+      {payload.map((entry: any, index: number) => (
+        <div key={`legend-${index}`} className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-sm font-medium" style={{ color: entry.color }}>
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+});
+CustomLegend.displayName = 'CustomLegend';
+
 export const NetworkTrendsChart = memo(function NetworkTrendsChart() {
   const theme = getThemeConfig();
   const { history, isLoading, error } = useNetworkHistory(30);
@@ -84,10 +106,7 @@ export const NetworkTrendsChart = memo(function NetworkTrendsChart() {
             style={{ fontSize: 12 }}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{ fontSize: '14px', paddingTop: '12px' }}
-            iconType="circle"
-          />
+          <Legend content={<CustomLegend />} />
           <Line
             type="monotone"
             dataKey="totalNodes"
@@ -101,7 +120,7 @@ export const NetworkTrendsChart = memo(function NetworkTrendsChart() {
           <Line
             type="monotone"
             dataKey="onlineNodes"
-            stroke="hsl(var(--success))"
+            stroke="#22c55e"
             strokeWidth={2}
             name="Online Nodes"
             dot={false}
@@ -111,7 +130,7 @@ export const NetworkTrendsChart = memo(function NetworkTrendsChart() {
           <Line
             type="monotone"
             dataKey="countries"
-            stroke="hsl(var(--chart-2))"
+            stroke="#3b82f6"
             strokeWidth={2}
             name="Countries"
             dot={false}
