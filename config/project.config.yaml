@@ -404,7 +404,7 @@ features:
       messageSign: true
       userAgent: false
       portChallenge: false
-      dnsTxt: false
+      dnsTxt: true
     # Payment requirement (anti-spam)
     requirePayment: false
     paymentAmount: 100
