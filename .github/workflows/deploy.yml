@@ -568,47 +568,62 @@ jobs:
           # Generate Caddyfile from template
           cat docker/Caddyfile.host.example | sed "s|nodes.example.com|$DOMAIN|g" > caddyfile-generated
 
-          # Copy to server
-          scp -i ~/.ssh/deploy_key caddyfile-generated ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:/tmp/caddyfile-deploy
+          # Copy to server for comparison
+          scp -i ~/.ssh/deploy_key caddyfile-generated ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:/tmp/caddyfile-new
 
-          # Deploy and reload Caddy
+          # Deploy and reload Caddy with diff checking
           ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'CADDY_SCRIPT'
             set -e
             # Determine site config name from project name
             PROJECT_NAME=$(basename ${{ vars.DEPLOY_PATH }})
             CADDY_SITE="/etc/caddy/sites/${PROJECT_NAME}.Caddyfile"
 
-            echo "Deploying Caddyfile to: $CADDY_SITE"
+            echo "Target Caddyfile: $CADDY_SITE"
 
-            # Backup existing config
+            # Check if Caddyfile exists and compare
+            if [ -f "$CADDY_SITE" ]; then
+              echo "Existing Caddyfile found, comparing..."
+              if sudo diff -q "$CADDY_SITE" /tmp/caddyfile-new > /dev/null 2>&1; then
+                echo "✓ Caddyfile unchanged - skipping deployment"
+                rm /tmp/caddyfile-new
+                exit 0
+              else
+                echo "Caddyfile has changed, deploying update..."
+              fi
+            else
+              echo "No existing Caddyfile found, deploying new config..."
+            fi
+
+            # Backup existing config if it exists
             if [ -f "$CADDY_SITE" ]; then
               sudo cp "$CADDY_SITE" "${CADDY_SITE}.backup-$(date +%Y%m%d-%H%M%S)"
-              echo "Backed up existing Caddyfile"
+              echo "✓ Backed up existing Caddyfile"
             fi
 
             # Deploy new config
-            sudo mv /tmp/caddyfile-deploy "$CADDY_SITE"
+            sudo mv /tmp/caddyfile-new "$CADDY_SITE"
             sudo chown root:root "$CADDY_SITE"
             sudo chmod 644 "$CADDY_SITE"
+            echo "✓ Deployed new Caddyfile"
 
             # Validate before reloading
             if sudo caddy validate --config /etc/caddy/Caddyfile; then
-              echo "Caddyfile validation passed"
+              echo "✓ Caddyfile validation passed"
               sudo systemctl reload caddy
-              echo "Caddy reloaded successfully"
+              echo "✓ Caddy reloaded successfully"
             else
-              echo "Error: Caddyfile validation failed"
+              echo "✗ Caddyfile validation failed"
               # Restore backup if it exists
-              if [ -f "${CADDY_SITE}.backup-"* ]; then
-                LATEST_BACKUP=$(ls -t "${CADDY_SITE}.backup-"* | head -1)
+              LATEST_BACKUP=$(ls -t "${CADDY_SITE}.backup-"* 2>/dev/null | head -1)
+              if [ -n "$LATEST_BACKUP" ]; then
                 sudo cp "$LATEST_BACKUP" "$CADDY_SITE"
-                echo "Restored backup: $LATEST_BACKUP"
+                echo "✓ Restored backup: $LATEST_BACKUP"
               fi
               exit 1
             fi
           CADDY_SCRIPT
 
-          echo "Caddyfile deployed and Caddy reloaded"
+          echo "Caddyfile deployment complete"
 
       - name: Deploy application
         run: |
