@@ -527,6 +527,12 @@ jobs:
     environment: production
 
     steps:
+      # Checkout code first (needed for Caddyfile template)
+      # IMPORTANT: Must be first to avoid wiping downloaded artifacts
+      - name: Checkout code (for Caddyfile)
+        if: needs.detect-config.outputs.caddy_mode == 'host'
+        uses: actions/checkout@v4
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -548,11 +554,6 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key deployment.env ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/.env
           echo "Copied deployment.env to server"
-
-      # Configure host Caddy if using host mode
-      - name: Checkout code (for Caddyfile)
-        if: needs.detect-config.outputs.caddy_mode == 'host'
-        uses: actions/checkout@v4
 
       - name: Deploy Caddyfile to host
         if: needs.detect-config.outputs.caddy_mode == 'host'
