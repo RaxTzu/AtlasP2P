@@ -23,6 +23,7 @@ function buildVerificationMethods(verification: FeatureFlags['verification']): V
   if (verification.methods.userAgent) methods.push('user_agent');
   if (verification.methods.portChallenge) methods.push('port_challenge');
   if (verification.methods.dnsTxt) methods.push('dns_txt');
+  if (verification.methods.httpFile) methods.push('http_file');
 
   // Default to message_sign if no methods enabled
   return methods.length > 0 ? methods : ['message_sign'];

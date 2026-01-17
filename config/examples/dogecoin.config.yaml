@@ -123,6 +123,7 @@ features:
     userAgent: true
     portChallenge: false
     dnsTxt: false
+    httpFile: true
   tipping:
     enabled: true
     tracking: false

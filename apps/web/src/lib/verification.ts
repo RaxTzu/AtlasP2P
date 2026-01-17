@@ -53,6 +53,7 @@ export const VerificationMethod = {
   USER_AGENT: 'user_agent' as const,
   PORT_CHECK: 'port_check' as const,
   DNS_TXT: 'dns_txt' as const,
+  HTTP_FILE: 'http_file' as const,
 } as const;
 
 export type VerificationMethodType = typeof VerificationMethod[keyof typeof VerificationMethod];
@@ -513,6 +514,93 @@ export async function verifyDnsTxt(
     return {
       valid: false,
       error: error instanceof Error ? error.message : 'DNS verification failed',
+    };
+  }
+}
+
+/**
+ * Verify HTTP file challenge
+ *
+ * Makes an HTTP GET request to the node's IP address to verify the challenge file.
+ * This proves:
+ * 1. Direct access to the node's IP and port
+ * 2. File system access (ability to create files)
+ * 3. Process execution rights (ability to run binaries)
+ * 4. Network binding capability (can bind to port 8080)
+ *
+ * SECURITY: This method directly validates node control without DNS intermediaries
+ *
+ * @param nodeIp - The node's IP address
+ * @param challenge - The expected challenge token
+ * @returns Verification result
+ */
+export async function verifyHttpFile(
+  nodeIp: string,
+  challenge: string
+): Promise<VerificationResult> {
+  try {
+    // Validate inputs
+    if (!nodeIp || !challenge) {
+      return {
+        valid: false,
+        error: 'Missing required parameters: nodeIp or challenge',
+      };
+    }
+
+    // Construct the verification URL
+    const url = `http://${nodeIp}:8080/.well-known/node-verify/${challenge}`;
+
+    // Make HTTP GET request with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'AtlasP2P-Verifier/1.0',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    // Check if response is successful
+    if (!response.ok) {
+      return {
+        valid: false,
+        error: `HTTP request failed with status ${response.status}`,
+      };
+    }
+
+    // Read response body
+    const content = await response.text();
+
+    // Verify content matches expected format: "node-verify:{challenge}"
+    const expectedContent = `node-verify:${challenge}`;
+    if (content.trim() !== expectedContent) {
+      return {
+        valid: false,
+        error: `Challenge content mismatch. Expected: "${expectedContent}", Got: "${content.trim()}"`,
+      };
+    }
+
+    // Verification successful!
+    return {
+      valid: true,
+    };
+  } catch (error) {
+    // Handle abort/timeout
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        valid: false,
+        error: 'Connection timeout. Make sure the verification server is running on port 8080',
+      };
+    }
+
+    // Handle network errors
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'HTTP file verification failed',
     };
   }
 }

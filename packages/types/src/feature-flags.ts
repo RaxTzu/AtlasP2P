@@ -6,7 +6,7 @@
 /**
  * Verification methods available in the system
  */
-export type VerificationMethod = 'message_sign' | 'user_agent' | 'port_challenge' | 'dns_txt';
+export type VerificationMethod = 'message_sign' | 'user_agent' | 'port_challenge' | 'dns_txt' | 'http_file';
 
 /**
  * Analytics providers
