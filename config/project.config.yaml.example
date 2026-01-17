@@ -424,6 +424,7 @@ features:
       userAgent: false       # ⚠️ TODO: Crawler verification not implemented - Do not enable
       portChallenge: false   # ⚠️ TODO: Crawler verification not implemented - Do not enable
       dnsTxt: true           # ✅ FULLY WORKING - Verify via DNS TXT record
+      httpFile: true         # ✅ FULLY WORKING - Verify via HTTP file challenge (zero dependencies)
     # Payment requirement (anti-spam)
     # ⚠️ WARNING: Do not enable requirePayment - feature is not implemented
     # TODO: Implement blockchain payment tracking before enabling

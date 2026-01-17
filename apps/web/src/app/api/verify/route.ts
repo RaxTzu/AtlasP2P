@@ -5,6 +5,7 @@ import { verifyInitiateSchema, verifyCompleteSchema } from '@/lib/validations'
 import {
   verifyMessageSignature,
   verifyDnsTxt,
+  verifyHttpFile,
   parseSignatureProof,
   isValidAddress,
   getNetworkConfig,
@@ -197,6 +198,8 @@ function generateChallenge(method: string): string {
       return nonce
     case VerificationMethod.DNS_TXT:
       return `node-verify=${nonce}`
+    case VerificationMethod.HTTP_FILE:
+      return nonce
     default:
       return nonce
   }
@@ -221,6 +224,8 @@ function getVerificationInstructions(
       return `Ensure your node at ${node.ip}:${node.port} is accessible. We will verify connectivity and respond to our challenge.`
     case VerificationMethod.DNS_TXT:
       return `Add a DNS TXT record to your domain with this value:\n\n${challenge}\n\nYou can add this to any domain you own (e.g., mynode.example.com or example.com).`
+    case VerificationMethod.HTTP_FILE:
+      return `Download the verification binary for your OS and run:\n\n./verify ${challenge}\n\nThe server will listen on port 8080 at ${node.ip}:8080 for verification.`
     default:
       return 'Unknown verification method'
   }
@@ -518,6 +523,64 @@ export async function PUT(request: NextRequest) {
           verificationId,
           userId: user.id,
           domain: proof,
+        });
+      }
+      break;
+    }
+
+    case VerificationMethod.HTTP_FILE: {
+      // HTTP File verification - Direct proof of node control
+      // User runs verification binary on the node, proving:
+      // 1. File system access
+      // 2. Process execution
+      // 3. Network binding capability
+      // 4. Direct IP access
+
+      // Get the node's IP address
+      const { data: node, error: nodeError } = await supabase
+        .from('nodes')
+        .select('ip')
+        .eq('id', verification.node_id)
+        .single();
+
+      if (nodeError || !node) {
+        console.error('[Verification] Node not found for HTTP file verification', {
+          verificationId,
+          nodeId: verification.node_id,
+          error: nodeError?.message,
+        });
+        return NextResponse.json(
+          {
+            error: 'Node not found',
+            code: 'NODE_NOT_FOUND',
+          },
+          { status: 404 }
+        )
+      }
+
+      // Verify HTTP file challenge
+      console.info('[Verification] Verifying HTTP file challenge', {
+        verificationId,
+        userId: user.id,
+        nodeIp: node.ip,
+        challenge: verification.challenge.substring(0, 20) + '...',
+      });
+
+      const result = await verifyHttpFile(node.ip, verification.challenge);
+      isValid = result.valid;
+      if (!isValid) {
+        errorMessage = result.error || 'HTTP file verification failed';
+        console.warn('[Verification] HTTP file verification failed', {
+          verificationId,
+          userId: user.id,
+          nodeIp: node.ip,
+          error: errorMessage,
+        });
+      } else {
+        console.info('[Verification] HTTP file verification successful', {
+          verificationId,
+          userId: user.id,
+          nodeIp: node.ip,
         });
       }
       break;

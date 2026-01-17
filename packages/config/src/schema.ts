@@ -293,6 +293,7 @@ export const VerificationMethodsSchema = z.object({
   userAgent: z.boolean(),
   portChallenge: z.boolean(),
   dnsTxt: z.boolean(),
+  httpFile: z.boolean(),
 });
 
 export const VerificationFeaturesSchema = z.object({

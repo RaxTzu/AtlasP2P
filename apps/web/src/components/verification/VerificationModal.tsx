@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, CheckCircle, AlertCircle, Copy, Loader2, Shield, Key, Globe, Wallet, Terminal, QrCode, RefreshCw, Trash2, Clock } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Copy, Loader2, Shield, Key, Globe, Wallet, Terminal, QrCode, RefreshCw, Trash2, Clock, FileCheck, Download } from 'lucide-react';
 import { getThemeConfig, getChainConfig } from '@/config';
 import { TurnstileWidget } from '@/components/turnstile/TurnstileWidget';
 import { useVerificationMethods, useTurnstileProtection } from '@/hooks/use-feature-flags';
@@ -506,6 +506,7 @@ export function VerificationModal({
       case 'dns_txt': return Globe;
       case 'user_agent': return Terminal;
       case 'port_challenge': return Shield;
+      case 'http_file': return FileCheck;
       default: return Shield;
     }
   };
@@ -516,6 +517,7 @@ export function VerificationModal({
       case 'dns_txt': return 'DNS TXT Record';
       case 'user_agent': return 'User Agent';
       case 'port_challenge': return 'Port Challenge';
+      case 'http_file': return 'HTTP File Challenge';
       default: return method;
     }
   };
@@ -530,6 +532,8 @@ export function VerificationModal({
         return 'Set a custom user agent string in your node configuration';
       case 'port_challenge':
         return 'Temporarily bind to a specific port for verification';
+      case 'http_file':
+        return 'Run a verification server on your node to prove direct access';
       default:
         return '';
     }
@@ -541,6 +545,7 @@ export function VerificationModal({
       case 'dns_txt': return { level: 'Medium', color: 'text-yellow-600' };
       case 'user_agent': return { level: 'Medium', color: 'text-yellow-600' };
       case 'port_challenge': return { level: 'High', color: 'text-green-600' };
+      case 'http_file': return { level: 'High', color: 'text-green-600' };
       default: return { level: 'Unknown', color: 'text-gray-600' };
     }
   };
@@ -926,6 +931,177 @@ export function VerificationModal({
                 </div>
               )}
 
+              {verification.method === 'http_file' && (
+                <div className="space-y-6">
+                  {/* Step 1: Download Verification Binary */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
+                        1
+                      </div>
+                      <h3 className="font-semibold text-lg">Download Verification Binary</h3>
+                    </div>
+
+                    <div className="ml-11 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Download the verification server for your operating system:
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {/* Linux (x86_64) */}
+                        <a
+                          href="/verify/verify-linux-amd64"
+                          download="verify"
+                          className="flex items-center gap-3 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                          <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div>
+                            <div className="font-medium">Linux (x86_64)</div>
+                            <div className="text-xs text-muted-foreground">Most Linux servers</div>
+                          </div>
+                        </a>
+
+                        {/* Linux (ARM64) */}
+                        <a
+                          href="/verify/verify-linux-arm64"
+                          download="verify"
+                          className="flex items-center gap-3 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                          <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div>
+                            <div className="font-medium">Linux (ARM64)</div>
+                            <div className="text-xs text-muted-foreground">Raspberry Pi, ARM servers</div>
+                          </div>
+                        </a>
+
+                        {/* macOS (Intel) */}
+                        <a
+                          href="/verify/verify-darwin-amd64"
+                          download="verify"
+                          className="flex items-center gap-3 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                          <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div>
+                            <div className="font-medium">macOS (Intel)</div>
+                            <div className="text-xs text-muted-foreground">Intel Mac</div>
+                          </div>
+                        </a>
+
+                        {/* macOS (Apple Silicon) */}
+                        <a
+                          href="/verify/verify-darwin-arm64"
+                          download="verify"
+                          className="flex items-center gap-3 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                          <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div>
+                            <div className="font-medium">macOS (M1/M2)</div>
+                            <div className="text-xs text-muted-foreground">Apple Silicon Mac</div>
+                          </div>
+                        </a>
+
+                        {/* Windows */}
+                        <a
+                          href="/verify/verify-windows-amd64.exe"
+                          download="verify.exe"
+                          className="flex items-center gap-3 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                          <Download className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+                          <div>
+                            <div className="font-medium">Windows (x64)</div>
+                            <div className="text-xs text-muted-foreground">Windows 10/11</div>
+                          </div>
+                        </a>
+                      </div>
+
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>Download the binary to your node server, not your local computer</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Run the Verification Server */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
+                        2
+                      </div>
+                      <h3 className="font-semibold text-lg">Run the Verification Server</h3>
+                    </div>
+
+                    <div className="ml-11 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Make the binary executable and run it with your challenge token:
+                      </p>
+
+                      <div className="space-y-3">
+                        {/* Linux/macOS Instructions */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Linux/macOS:</p>
+                          <div className="relative">
+                            <div className="p-4 bg-zinc-900 dark:bg-zinc-950 rounded-xl border border-zinc-700 overflow-x-auto">
+                              <code className="text-sm text-green-400 font-mono whitespace-pre-wrap break-all">
+                                {`chmod +x verify\n./verify ${verification.challenge}`}
+                              </code>
+                            </div>
+                            <button
+                              onClick={handleCopyChallenge}
+                              className="absolute top-2 right-2 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-all"
+                              title="Copy command"
+                            >
+                              {copySuccess ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4 text-zinc-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Windows Instructions */}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Windows:</p>
+                          <div className="relative">
+                            <div className="p-4 bg-zinc-900 dark:bg-zinc-950 rounded-xl border border-zinc-700 overflow-x-auto">
+                              <code className="text-sm text-green-400 font-mono whitespace-pre-wrap break-all">
+                                {`verify.exe ${verification.challenge}`}
+                              </code>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                        <div className="flex gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="h-6 w-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                              ℹ
+                            </div>
+                          </div>
+                          <div className="text-sm space-y-2">
+                            <p className="font-medium text-blue-900 dark:text-blue-100">
+                              What this does:
+                            </p>
+                            <ul className="text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                              <li>Creates a temporary file at <code className="text-xs bg-blue-100 dark:bg-blue-900 px-1 rounded">.well-known/node-verify/{verification.challenge?.substring(0, 8)}...</code></li>
+                              <li>Starts HTTP server on port 8080 at <code className="text-xs bg-blue-100 dark:bg-blue-900 px-1 rounded">{nodeIp}:8080</code></li>
+                              <li>Waits for our verification system to check the file</li>
+                              <li>Automatically cleans up when you press Ctrl+C</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>Keep the server running until verification completes. Click "Verify Now" below once the server is running.</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Removed legacy verification methods: wallet_payment and rpc_call */}
 
               {(verification.method === 'user_agent' || verification.method === 'port_challenge') && (
@@ -963,9 +1139,9 @@ export function VerificationModal({
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold" style={{ backgroundColor: theme.primaryColor }}>
-                    {verification.method === 'dns_txt' ? '3' : '2'}
+                    {verification.method === 'dns_txt' || verification.method === 'http_file' ? '3' : '2'}
                   </div>
-                  <h3 className="font-semibold text-lg">Submit Your Proof</h3>
+                  <h3 className="font-semibold text-lg">{verification.method === 'http_file' ? 'Verify Node Access' : 'Submit Your Proof'}</h3>
                 </div>
                 <div className="ml-11 space-y-3">
                   {/* DNS Verification - Special UI with auto-polling */}
@@ -1066,6 +1242,13 @@ export function VerificationModal({
                         Auto-check runs every 60 seconds for 10 minutes. Stopping early applies a 3-minute cooldown. Manual checks have 5-minute cooldown.
                       </p>
                     </div>
+                  ) : verification.method === 'http_file' ? (
+                    /* HTTP File verification - no proof input needed */
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Click "Verify Now" below once your verification server is running on port 8080.
+                      </p>
+                    </div>
                   ) : (
                     /* Standard proof input for other methods */
                     <div>
@@ -1097,8 +1280,8 @@ export function VerificationModal({
                     </div>
                   )}
 
-                  {/* Turnstile for proof submission (non-DNS methods) */}
-                  {requiresTurnstile && verification.method !== 'dns_txt' && (
+                  {/* Turnstile for proof submission (non-DNS, non-HTTP-file methods) */}
+                  {requiresTurnstile && verification.method !== 'dns_txt' && verification.method !== 'http_file' && (
                     <div className="flex justify-center">
                       <TurnstileWidget
                         onSuccess={setTurnstileToken}
@@ -1120,12 +1303,12 @@ export function VerificationModal({
                       </button>
                       <button
                         onClick={handleSubmitProof}
-                        disabled={loading || !proof || (requiresTurnstile && !turnstileToken)}
+                        disabled={loading || (verification.method !== 'http_file' && !proof) || (requiresTurnstile && !turnstileToken)}
                         className="flex-1 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
                         style={{ backgroundColor: theme.primaryColor }}
                       >
                         {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-                        {loading ? 'Verifying...' : 'Submit Verification'}
+                        {loading ? 'Verifying...' : verification.method === 'http_file' ? 'Verify Now' : 'Submit Verification'}
                       </button>
                     </div>
                   )}

@@ -9,7 +9,7 @@
 export type NodeStatus = 'pending' | 'up' | 'down' | 'reachable';
 export type NodeTier = 'diamond' | 'gold' | 'silver' | 'bronze' | 'standard';
 export type ConnectionType = 'ipv4' | 'ipv6' | 'onion';
-export type VerificationMethod = 'message_sign' | 'user_agent' | 'port_challenge' | 'dns_txt';
+export type VerificationMethod = 'message_sign' | 'user_agent' | 'port_challenge' | 'dns_txt' | 'http_file';
 export type VerificationStatus = 'pending' | 'verified' | 'failed' | 'expired';
 
 export interface Node {
@@ -546,6 +546,7 @@ export interface FeatureFlags {
       userAgent: boolean;
       portChallenge: boolean;
       dnsTxt: boolean;
+      httpFile: boolean;
     };
     requirePayment: boolean;
     paymentAmount: number;
