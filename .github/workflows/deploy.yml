@@ -671,10 +671,20 @@ jobs:
             if [ -d supabase/migrations ]; then
               # Install Supabase CLI if not present
               if ! command -v supabase &> /dev/null; then
-                echo "Installing Supabase CLI..."
-                curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz
-                sudo mv supabase /usr/local/bin/
+                echo "Installing Supabase CLI to ~/.local/bin..."
+                mkdir -p ~/.local/bin
+                cd /tmp
+                curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz -o supabase.tar.gz
+                tar -xzf supabase.tar.gz
+                mv supabase ~/.local/bin/
+                rm -f supabase.tar.gz
+                cd -
+                export PATH="$HOME/.local/bin:$PATH"
+                echo "Supabase CLI installed successfully"
               fi
+
+              # Ensure supabase is in PATH
+              export PATH="$HOME/.local/bin:$PATH"
 
               # Link to Supabase project and push migrations
               if [ "$DEPLOYMENT_MODE" = "self-hosted-cloud" ]; then
