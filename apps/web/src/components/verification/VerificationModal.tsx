@@ -1297,7 +1297,10 @@ export function VerificationModal({
                   {verification.method !== 'dns_txt' && (
                     <div className="flex gap-3">
                       <button
-                        onClick={() => setStep('select')}
+                        onClick={() => {
+                          setStep('select');
+                          setTurnstileToken(null); // Reset for next verification attempt
+                        }}
                         className="px-6 py-3 border-2 border-border rounded-xl hover:bg-muted transition-all duration-200 font-medium hover:shadow-md"
                         disabled={loading}
                       >
@@ -1321,6 +1324,7 @@ export function VerificationModal({
                       onClick={() => {
                         stopDnsPolling();
                         setStep('select');
+                        setTurnstileToken(null); // Reset for next verification attempt
                       }}
                       className="px-6 py-3 border-2 border-border rounded-xl hover:bg-muted transition-all duration-200 font-medium hover:shadow-md"
                     >
