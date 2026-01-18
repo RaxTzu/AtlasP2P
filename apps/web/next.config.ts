@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
 
   // Enable instrumentation hook for running migrations at startup
   experimental: {
-    instrumentationHook: true,
+    instrumentationHook: true as any, // Type will be available in Next.js future versions
   },
 
   // Output standalone server to bypass Next.js 16 static pre-rendering bug

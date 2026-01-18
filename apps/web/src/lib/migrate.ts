@@ -75,7 +75,7 @@ async function ensureMigrationsTable(pool: Pool): Promise<void> {
 async function getAppliedMigrations(pool: Pool): Promise<string[]> {
   const client = await pool.connect();
   try {
-    const result = await client.query('SELECT filename FROM schema_migrations ORDER BY filename');
+    const result = await client.query<{ filename: string }>('SELECT filename FROM schema_migrations ORDER BY filename');
     return result.rows.map(row => row.filename);
   } catch (error) {
     console.warn('[Migrations] Could not fetch applied migrations, assuming none:', error);
