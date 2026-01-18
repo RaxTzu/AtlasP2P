@@ -24,10 +24,21 @@ interface Migration {
  * Get database connection pool
  */
 function getPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
 
+  // Build DATABASE_URL from POSTGRES_* env vars if not set
   if (!connectionString) {
-    throw new Error('DATABASE_URL not set - cannot run migrations');
+    const host = process.env.POSTGRES_HOST || 'db';
+    const port = process.env.POSTGRES_PORT || '5432';
+    const db = process.env.POSTGRES_DB || 'postgres';
+    const user = process.env.POSTGRES_USER || 'postgres';
+    const password = process.env.POSTGRES_PASSWORD;
+
+    if (!password) {
+      throw new Error('DATABASE_URL or POSTGRES_PASSWORD must be set for migrations');
+    }
+
+    connectionString = `postgresql://${user}:${password}@${host}:${port}/${db}`;
   }
 
   return new Pool({
@@ -131,9 +142,9 @@ async function applyMigration(pool: Pool, migration: Migration): Promise<boolean
  * Run all pending migrations
  */
 export async function runMigrations(): Promise<void> {
-  // Skip migrations if DATABASE_URL is not set
-  if (!process.env.DATABASE_URL) {
-    console.log('[Migrations] DATABASE_URL not set, skipping migrations');
+  // Skip migrations if no database credentials are available
+  if (!process.env.DATABASE_URL && !process.env.POSTGRES_PASSWORD) {
+    console.log('[Migrations] No database credentials found, skipping migrations');
     return;
   }
 
