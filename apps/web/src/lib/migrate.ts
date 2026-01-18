@@ -9,7 +9,11 @@ import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
 
-const MIGRATIONS_DIR = path.join(process.cwd(), '../../supabase/migrations');
+// In development: cwd is apps/web, so ../../supabase/migrations
+// In production standalone: cwd is /app, so ./supabase/migrations
+const MIGRATIONS_DIR = process.env.NODE_ENV === 'production'
+  ? path.join(process.cwd(), 'supabase/migrations')
+  : path.join(process.cwd(), '../../supabase/migrations');
 
 interface Migration {
   filename: string;
