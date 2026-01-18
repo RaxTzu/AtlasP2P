@@ -434,6 +434,8 @@ export function VerificationModal({
         requiresAdminApproval: data.requiresAdminApproval
       });
       setStep('challenge');
+      // Reset Turnstile token after successful initiation so it can be refreshed for proof submission
+      setTurnstileToken(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to initiate verification');
     } finally {
@@ -1280,8 +1282,8 @@ export function VerificationModal({
                     </div>
                   )}
 
-                  {/* Turnstile for proof submission (non-DNS, non-HTTP-file methods) */}
-                  {requiresTurnstile && verification.method !== 'dns_txt' && verification.method !== 'http_file' && (
+                  {/* Turnstile for proof submission (non-DNS methods) */}
+                  {requiresTurnstile && verification.method !== 'dns_txt' && (
                     <div className="flex justify-center">
                       <TurnstileWidget
                         onSuccess={setTurnstileToken}
