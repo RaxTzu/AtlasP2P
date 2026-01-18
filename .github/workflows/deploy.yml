@@ -666,6 +666,46 @@ jobs:
             echo "Pulling latest images..."
             docker compose $COMPOSE_FILES pull
 
+            # Run database migrations using Supabase CLI
+            echo "Running database migrations..."
+            if [ -d supabase/migrations ]; then
+              # Install Supabase CLI if not present
+              if ! command -v supabase &> /dev/null; then
+                echo "Installing Supabase CLI..."
+                curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz
+                sudo mv supabase /usr/local/bin/
+              fi
+
+              # Link to Supabase project and push migrations
+              if [ "$DEPLOYMENT_MODE" = "self-hosted-cloud" ]; then
+                # Cloud mode: link to Supabase Cloud project
+                echo "Linking to Supabase Cloud project..."
+                if [ -n "$SUPABASE_PROJECT_REF" ] && [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+                  supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$POSTGRES_PASSWORD"
+                  echo "Pushing migrations to Supabase Cloud..."
+                  supabase db push
+                else
+                  echo "Warning: SUPABASE_PROJECT_REF or SUPABASE_ACCESS_TOKEN not set, skipping migrations"
+                fi
+              else
+                # Docker mode: link to local Supabase instance
+                echo "Linking to local Supabase instance..."
+                docker compose $COMPOSE_FILES up -d db
+                sleep 5
+
+                # Get database connection details from .env
+                DB_HOST="${POSTGRES_HOST:-localhost}"
+                DB_PORT="${POSTGRES_PORT:-5432}"
+                DB_USER="${POSTGRES_USER:-postgres}"
+                DB_NAME="${POSTGRES_DB:-postgres}"
+
+                supabase db push --db-url "postgresql://$DB_USER:$POSTGRES_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME"
+              fi
+              echo "Migrations complete"
+            else
+              echo "No migrations directory found, skipping"
+            fi
+
             # Start services
             echo "Starting services..."
             docker compose $COMPOSE_FILES up -d --remove-orphans
