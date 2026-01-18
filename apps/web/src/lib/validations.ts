@@ -30,7 +30,7 @@ export type LeaderboardQuery = z.infer<typeof leaderboardQuerySchema>;
 // Verification API body schemas
 export const verifyInitiateSchema = z.object({
   nodeId: z.string().uuid('Invalid node ID format'),
-  method: z.enum(['message_sign', 'user_agent', 'port_check', 'dns_txt']),
+  method: z.enum(['message_sign', 'user_agent', 'port_check', 'dns_txt', 'http_file']),
   turnstileToken: z.string().optional(), // Optional: required only if Turnstile is enabled
 });
 
