@@ -405,6 +405,7 @@ features:
       userAgent: false
       portChallenge: false
       dnsTxt: true
+      httpFile: true
     # Payment requirement (anti-spam)
     requirePayment: false
     paymentAmount: 100
