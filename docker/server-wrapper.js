@@ -10,6 +10,9 @@ const path = require('path');
 
 async function startServer() {
   try {
+    // Set NEXT_RUNTIME so instrumentation knows we're in Node.js runtime
+    process.env.NEXT_RUNTIME = 'nodejs';
+
     // Load and run instrumentation BEFORE starting Next.js
     const instrumentationPath = path.join(__dirname, 'apps/web/.next/server/instrumentation.js');
     console.log('[Server] Loading instrumentation from:', instrumentationPath);
@@ -25,6 +28,7 @@ async function startServer() {
     }
   } catch (error) {
     console.error('[Server] Failed to run instrumentation:', error.message);
+    console.error('[Server] Stack:', error.stack);
     // Don't fail - allow server to start anyway
   }
 
