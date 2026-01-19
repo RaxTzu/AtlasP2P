@@ -2,19 +2,10 @@
 // INSTRUMENTATION - Server Initialization
 // ===========================================
 // This file runs ONCE when the Next.js server starts
-// Use it to initialize global resources
+// NOTE: Migrations run via docker/server-wrapper.js in production
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Run database migrations FIRST
-    try {
-      const { runMigrations } = await import('./src/lib/migrate');
-      await runMigrations();
-    } catch (error) {
-      console.error('[Migrations] Migration error:', error);
-      // Don't throw - allow server to start anyway
-    }
-
     // Load project configuration on server startup
     const { autoLoadConfig } = await import('@atlasp2p/config/loader.server');
 
