@@ -2,7 +2,7 @@
 // INSTRUMENTATION - Server Initialization
 // ===========================================
 // This file runs ONCE when the Next.js server starts
-// NOTE: Migrations run via docker/server-wrapper.js in production
+// NOTE: Migrations run via docker/entrypoint.sh in production
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {

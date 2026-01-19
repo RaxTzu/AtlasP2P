@@ -15,6 +15,7 @@ build
 .env.production
 .env.development
 config/production.env
+deployment.env
 
 # IDE
 .idea
@@ -73,9 +74,11 @@ data/geoip/GeoIP.conf
 !data/geoip/GeoIP.conf.example
 
 # Project config (fork-specific, keep template only)
+config/project.config.yaml
 !config/project.config.yaml.example
 
 # Deploy workflow (fork-specific, keep template only)
+.github/workflows/deploy.yml
 !.github/workflows/deploy.yml.example
 
 # Supabase
