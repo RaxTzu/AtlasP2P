@@ -1089,8 +1089,8 @@ export function VerificationModal({
                               What this does:
                             </p>
                             <ul className="text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                              <li>Checks if your {projectConfig.chainConfig.name} daemon is running ({projectConfig.chainConfig.name.toLowerCase()}d or {projectConfig.chainConfig.name.toLowerCase()}-qt)</li>
-                              <li>Verifies port {projectConfig.chainConfig.p2pPort} is listening</li>
+                              <li>Checks if your {chainConfig.name} daemon is running ({chainConfig.name.toLowerCase()}d or {chainConfig.name.toLowerCase()}-qt)</li>
+                              <li>Verifies port {chainConfig.p2pPort} is listening</li>
                               <li>Submits verification from your node&apos;s IP address</li>
                               <li><strong>No port forwarding needed!</strong> Works behind NAT/CGNAT</li>
                             </ul>
@@ -1100,7 +1100,7 @@ export function VerificationModal({
 
                       <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span><strong>Important:</strong> Run this command on your node server (the machine running {projectConfig.chainConfig.name.toLowerCase()}d), not your local computer. The binary will automatically submit the verification and you&apos;ll see the result in the terminal.</span>
+                        <span><strong>Important:</strong> Run this command on your node server (the machine running {chainConfig.name.toLowerCase()}d), not your local computer. The binary will automatically submit the verification and you&apos;ll see the result in the terminal.</span>
                       </p>
                     </div>
                   </div>

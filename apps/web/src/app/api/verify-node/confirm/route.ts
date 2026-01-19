@@ -137,8 +137,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Type guard to ensure nodes data exists
-    if (!verification.nodes || Array.isArray(verification.nodes)) {
-      console.error('[VerifyNode:Confirm] Invalid nodes data structure:', verification.nodes);
+    const nodes = verification.nodes;
+    if (!nodes || Array.isArray(nodes) || !('ip' in nodes)) {
+      console.error('[VerifyNode:Confirm] Invalid nodes data structure:', nodes);
       return NextResponse.json(
         {
           success: false,
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const node = verification.nodes;
+    const node = nodes as { id: string; ip: string; port: number };
 
     // SECURITY VALIDATION #2: Request IP must match node IP in crawler DB
     if (requestIp !== node.ip) {
@@ -270,7 +271,7 @@ export async function POST(request: NextRequest) {
         content_data: {
           node_id: verification.node_id,
           method: verification.method,
-          challenge: verification.challenge,
+          challenge: challenge,
           proof: 'Two-step POST verification',
           verification_passed: true,
           processCheck,

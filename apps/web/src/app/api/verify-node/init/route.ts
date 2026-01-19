@@ -131,8 +131,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Type guard to ensure nodes data exists
-    if (!verification.nodes || Array.isArray(verification.nodes)) {
-      console.error('[VerifyNode:Init] Invalid nodes data structure:', verification.nodes);
+    const nodes = verification.nodes;
+    if (!nodes || Array.isArray(nodes) || !('ip' in nodes) || !('port' in nodes)) {
+      console.error('[VerifyNode:Init] Invalid nodes data structure:', nodes);
       return NextResponse.json(
         {
           success: false,
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const node = verification.nodes;
+    const node = nodes as { id: string; ip: string; port: number };
 
     console.info('[VerifyNode:Init] Verification init successful', {
       verificationId: verification.id,
