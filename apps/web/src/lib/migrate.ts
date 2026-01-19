@@ -139,6 +139,41 @@ async function applyMigration(pool: Pool, migration: Migration): Promise<boolean
 }
 
 /**
+ * Sync internal Supabase user passwords to match POSTGRES_PASSWORD
+ * This is needed because migrations create users with hardcoded 'postgres' password,
+ * but docker-compose uses POSTGRES_PASSWORD for auth/rest connections.
+ */
+async function syncInternalUserPasswords(pool: Pool): Promise<void> {
+  const password = process.env.POSTGRES_PASSWORD;
+  if (!password) return;
+
+  const internalUsers = [
+    'supabase_auth_admin',
+    'authenticator',
+    'supabase_storage_admin',
+    'supabase_functions_admin',
+    'supabase_admin',
+    'dashboard_user'
+  ];
+
+  const client = await pool.connect();
+  try {
+    for (const user of internalUsers) {
+      try {
+        // Use parameterized query to prevent SQL injection
+        // Note: Can't use $1 for role names, but password is from trusted env var
+        await client.query(`ALTER ROLE ${user} WITH PASSWORD '${password.replace(/'/g, "''")}'`);
+      } catch (err) {
+        // User might not exist, that's OK
+      }
+    }
+    console.log('[Migrations] ✓ Synced internal user passwords');
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Run all pending migrations
  */
 export async function runMigrations(): Promise<void> {
@@ -167,6 +202,8 @@ export async function runMigrations(): Promise<void> {
 
     if (pendingMigrations.length === 0) {
       console.log('[Migrations] ✓ No pending migrations');
+      // Still sync passwords in case they're out of sync
+      await syncInternalUserPasswords(pool);
       return;
     }
 
@@ -180,6 +217,9 @@ export async function runMigrations(): Promise<void> {
         throw new Error(`Migration ${migration.filename} failed`);
       }
     }
+
+    // Sync passwords after migrations (especially after 0001_foundation creates users)
+    await syncInternalUserPasswords(pool);
 
     console.log('[Migrations] ✓ All migrations applied successfully');
   } catch (error) {
