@@ -400,6 +400,13 @@ jobs:
           echo "  TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:0:20}..."
           echo "  ENABLE_TURNSTILE: $NEXT_PUBLIC_ENABLE_TURNSTILE"
 
+      # Create empty deployment.env for manual mode (Dockerfile requires it)
+      - name: Create placeholder deployment.env
+        if: needs.detect-config.outputs.secrets_source == 'manual'
+        run: |
+          echo "# Manual mode - env vars passed via Docker build-args" > deployment.env
+          echo "✓ Created placeholder deployment.env for Docker build"
+
       # Extract registry configuration from SSM artifact (single source of truth)
       - name: Extract registry configuration
         id: registry-config
