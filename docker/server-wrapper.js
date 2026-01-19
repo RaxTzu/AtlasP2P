@@ -1,38 +1,101 @@
 /**
  * Custom Server Wrapper for Next.js Standalone Mode
  *
- * Ensures instrumentation hook runs before starting the Next.js server.
- * This is required because Next.js standalone mode doesn't automatically
- * call instrumentation.js, which means migrations won't run on startup.
+ * Runs migrations before starting the Next.js server.
  */
 
+const { Pool } = require('pg');
+const fs = require('fs');
 const path = require('path');
 
-async function startServer() {
+const MIGRATIONS_DIR = path.join(__dirname, 'supabase/migrations');
+
+async function syncPasswords(pool) {
+  const password = process.env.POSTGRES_PASSWORD;
+  if (!password) return;
+
+  const users = ['supabase_auth_admin', 'authenticator', 'supabase_storage_admin', 'supabase_functions_admin', 'supabase_admin', 'dashboard_user'];
+  const client = await pool.connect();
   try {
-    // Set NEXT_RUNTIME so instrumentation knows we're in Node.js runtime
-    process.env.NEXT_RUNTIME = 'nodejs';
-
-    // Load and run instrumentation BEFORE starting Next.js
-    const instrumentationPath = path.join(__dirname, 'apps/web/.next/server/instrumentation.js');
-    console.log('[Server] Loading instrumentation from:', instrumentationPath);
-
-    const instrumentation = require(instrumentationPath);
-
-    if (instrumentation && typeof instrumentation.register === 'function') {
-      console.log('[Server] Running instrumentation.register()...');
-      await instrumentation.register();
-      console.log('[Server] ✓ Instrumentation completed');
-    } else {
-      console.warn('[Server] Warning: No register() function found in instrumentation');
+    for (const user of users) {
+      try {
+        await client.query(`ALTER ROLE ${user} WITH PASSWORD '${password.replace(/'/g, "''")}'`);
+      } catch (e) {}
     }
-  } catch (error) {
-    console.error('[Server] Failed to run instrumentation:', error.message);
-    console.error('[Server] Stack:', error.stack);
-    // Don't fail - allow server to start anyway
+    console.log('[Migrations] ✓ Synced passwords');
+  } finally {
+    client.release();
+  }
+}
+
+async function runMigrations() {
+  if (!process.env.POSTGRES_PASSWORD) {
+    console.log('[Migrations] No POSTGRES_PASSWORD, skipping');
+    return;
   }
 
-  // Now start the actual Next.js server
+  const host = process.env.POSTGRES_HOST || 'db';
+  const port = process.env.POSTGRES_PORT || '5432';
+  const db = process.env.POSTGRES_DB || 'postgres';
+  const user = process.env.POSTGRES_USER || 'postgres';
+  const password = process.env.POSTGRES_PASSWORD;
+
+  const pool = new Pool({
+    connectionString: `postgresql://${user}:${password}@${host}:${port}/${db}`,
+    ssl: false
+  });
+
+  try {
+    const client = await pool.connect();
+    await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`);
+    client.release();
+
+    const applied = (await pool.query('SELECT filename FROM schema_migrations')).rows.map(r => r.filename);
+
+    if (!fs.existsSync(MIGRATIONS_DIR)) {
+      console.log('[Migrations] No migrations dir');
+      return;
+    }
+
+    const files = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();
+    const pending = files.filter(f => !applied.includes(f));
+
+    if (pending.length === 0) {
+      console.log('[Migrations] ✓ No pending migrations');
+      await syncPasswords(pool);
+      return;
+    }
+
+    console.log(`[Migrations] Applying ${pending.length} migration(s)`);
+    for (const file of pending) {
+      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8');
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query(sql);
+        await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [file]);
+        await c.query('COMMIT');
+        console.log(`[Migrations] ✓ ${file}`);
+      } catch (e) {
+        await c.query('ROLLBACK');
+        console.error(`[Migrations] ✗ ${file}:`, e.message);
+        throw e;
+      } finally {
+        c.release();
+      }
+    }
+
+    await syncPasswords(pool);
+    console.log('[Migrations] ✓ Done');
+  } catch (e) {
+    console.error('[Migrations] Error:', e.message);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function startServer() {
+  await runMigrations();
   console.log('[Server] Starting Next.js server...');
   require('./apps/web/server.js');
 }
