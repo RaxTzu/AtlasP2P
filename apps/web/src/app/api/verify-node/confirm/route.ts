@@ -114,9 +114,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract request IP
-    const requestIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-                      request.headers.get('x-real-ip') ||
-                      'unknown';
+    // Strip port if present (e.g., "172.71.24.8:9588" -> "172.71.24.8")
+    let requestIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                    request.headers.get('x-real-ip') ||
+                    'unknown';
+    // Remove port suffix if present
+    if (requestIp.includes(':') && !requestIp.includes('[')) {
+      // IPv4 with port - strip the port
+      requestIp = requestIp.split(':')[0];
+    }
 
     // SECURITY VALIDATION #1: Request IP must match IP from init call
     if (requestIp !== verification.ip_address) {
