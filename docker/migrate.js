@@ -16,7 +16,7 @@ async function main() {
   const password = process.env.POSTGRES_PASSWORD;
   if (!password) {
     console.log('[Migrate] No POSTGRES_PASSWORD, skipping migrations');
-    process.exit(0);
+    return; // Clean exit without process.exit
   }
 
   const pool = new Pool({
@@ -43,7 +43,7 @@ async function main() {
     // Get pending migrations
     if (!fs.existsSync(MIGRATIONS_DIR)) {
       console.log('[Migrate] No migrations directory:', MIGRATIONS_DIR);
-      process.exit(0);
+      return; // Clean exit
     }
 
     const files = fs.readdirSync(MIGRATIONS_DIR)
@@ -54,7 +54,7 @@ async function main() {
     if (files.length === 0) {
       console.log('[Migrate] No pending migrations');
       await syncPasswords(pool, password);
-      process.exit(0);
+      return; // Clean exit
     }
 
     console.log(`[Migrate] Applying ${files.length} migration(s)...`);
@@ -71,7 +71,7 @@ async function main() {
       } catch (err) {
         await client.query('ROLLBACK');
         console.error(`[Migrate] ✗ ${file}:`, err.message);
-        process.exit(1);
+        throw err; // Re-throw to trigger finally and then fail
       } finally {
         client.release();
       }
@@ -85,12 +85,14 @@ async function main() {
 }
 
 async function syncPasswords(pool, password) {
+  // All roles that need password sync (including postgres for Docker volume resets)
   const users = [
+    'postgres',
+    'supabase_admin',
     'supabase_auth_admin',
     'authenticator',
     'supabase_storage_admin',
     'supabase_functions_admin',
-    'supabase_admin',
     'dashboard_user'
   ];
 

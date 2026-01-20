@@ -682,9 +682,12 @@ make test           # Run tests
 
 **Running Migrations**:
 ```bash
-# Migrations auto-run on container start via /docker-entrypoint-initdb.d/
-# Or manually:
-docker exec -i atlasp2p-db psql -U supabase_admin -d postgres < supabase/migrations/0001_foundation.sql
+# Migrations auto-run on web container start via entrypoint.sh + migrate.js
+# The migrate.js script tracks applied migrations in schema_migrations table
+# and syncs all Supabase internal user passwords after migration
+
+# Manual migration (if needed):
+docker exec -i atlasp2p-db psql -U postgres -d postgres < supabase/migrations/0001_foundation.sql
 ```
 
 **Migration Order** (critical):

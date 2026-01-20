@@ -87,7 +87,7 @@ NEXT_PUBLIC_SUPABASE_URL=http://localhost:4020
 SUPABASE_INTERNAL_URL=http://kong:8000  # Docker internal
 ```
 
-**Migrations:** Auto-run from `/docker-entrypoint-initdb.d/`
+**Migrations:** Auto-run via `entrypoint.sh` + `migrate.js` on web container start
 
 **Storage:** Docker volume `avatar-storage`
 

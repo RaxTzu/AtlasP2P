@@ -58,17 +58,17 @@ CREATE TABLE IF NOT EXISTS nodes (
     UNIQUE(ip, port, chain)
 );
 
-CREATE INDEX idx_nodes_chain ON nodes(chain);
-CREATE INDEX idx_nodes_status ON nodes(status);
-CREATE INDEX idx_nodes_country ON nodes(country_code);
-CREATE INDEX idx_nodes_version ON nodes(client_version);
-CREATE INDEX idx_nodes_tier ON nodes(tier);
-CREATE INDEX idx_nodes_rank ON nodes(rank);
-CREATE INDEX idx_nodes_last_seen ON nodes(last_seen);
-CREATE INDEX idx_nodes_location ON nodes(latitude, longitude);
-CREATE INDEX idx_nodes_address ON nodes(address);
-CREATE INDEX idx_nodes_search ON nodes USING gin(address gin_trgm_ops);
-CREATE INDEX idx_nodes_services ON nodes(services) WHERE services IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_nodes_chain ON nodes(chain);
+CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(status);
+CREATE INDEX IF NOT EXISTS idx_nodes_country ON nodes(country_code);
+CREATE INDEX IF NOT EXISTS idx_nodes_version ON nodes(client_version);
+CREATE INDEX IF NOT EXISTS idx_nodes_tier ON nodes(tier);
+CREATE INDEX IF NOT EXISTS idx_nodes_rank ON nodes(rank);
+CREATE INDEX IF NOT EXISTS idx_nodes_last_seen ON nodes(last_seen);
+CREATE INDEX IF NOT EXISTS idx_nodes_location ON nodes(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_nodes_address ON nodes(address);
+CREATE INDEX IF NOT EXISTS idx_nodes_search ON nodes USING gin(address gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_nodes_services ON nodes(services) WHERE services IS NOT NULL;
 
 -- Snapshots
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(chain, timestamp)
 );
-CREATE INDEX idx_snapshots_chain_time ON snapshots(chain, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_chain_time ON snapshots(chain, timestamp DESC);
 
 CREATE TABLE IF NOT EXISTS node_snapshots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS node_snapshots (
     block_height INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_node_snapshots_node_time ON node_snapshots(node_id, snapshot_time DESC);
+CREATE INDEX IF NOT EXISTS idx_node_snapshots_node_time ON node_snapshots(node_id, snapshot_time DESC);
 
 CREATE TABLE IF NOT EXISTS network_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -112,8 +112,8 @@ CREATE TABLE IF NOT EXISTS network_history (
     most_common_version TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_network_history_time ON network_history(snapshot_time DESC);
-CREATE INDEX idx_network_history_chain ON network_history(chain);
+CREATE INDEX IF NOT EXISTS idx_network_history_time ON network_history(snapshot_time DESC);
+CREATE INDEX IF NOT EXISTS idx_network_history_chain ON network_history(chain);
 
 -- Verification
 CREATE TABLE IF NOT EXISTS verifications (
@@ -131,9 +131,9 @@ CREATE TABLE IF NOT EXISTS verifications (
     attempts INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_verifications_node ON verifications(node_id);
-CREATE INDEX idx_verifications_user ON verifications(user_id);
-CREATE INDEX idx_verifications_status ON verifications(status);
+CREATE INDEX IF NOT EXISTS idx_verifications_node ON verifications(node_id);
+CREATE INDEX IF NOT EXISTS idx_verifications_user ON verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_verifications_status ON verifications(status);
 
 CREATE TABLE IF NOT EXISTS verified_nodes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS verified_nodes (
     verified_at TIMESTAMPTZ DEFAULT NOW(),
     verification_method TEXT
 );
-CREATE INDEX idx_verified_nodes_user ON verified_nodes(user_id);
+CREATE INDEX IF NOT EXISTS idx_verified_nodes_user ON verified_nodes(user_id);
 
 -- Profiles
 CREATE TABLE IF NOT EXISTS node_profiles (
@@ -169,9 +169,9 @@ CREATE TABLE IF NOT EXISTS node_profiles (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_node_profiles_node ON node_profiles(node_id);
-CREATE INDEX idx_node_profiles_user ON node_profiles(user_id);
-CREATE INDEX idx_node_profiles_moderation ON node_profiles(moderation_status) WHERE moderation_status != 'approved';
+CREATE INDEX IF NOT EXISTS idx_node_profiles_node ON node_profiles(node_id);
+CREATE INDEX IF NOT EXISTS idx_node_profiles_user ON node_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_node_profiles_moderation ON node_profiles(moderation_status) WHERE moderation_status != 'approved';
 
 -- Tipping
 CREATE TABLE IF NOT EXISTS node_tip_configs (
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS node_tip_configs (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_tip_configs_node ON node_tip_configs(node_id);
+CREATE INDEX IF NOT EXISTS idx_tip_configs_node ON node_tip_configs(node_id);
 
 CREATE TABLE IF NOT EXISTS tips (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -198,8 +198,8 @@ CREATE TABLE IF NOT EXISTS tips (
     confirmed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_tips_node ON tips(node_id);
-CREATE INDEX idx_tips_tx ON tips(tx_hash);
+CREATE INDEX IF NOT EXISTS idx_tips_node ON tips(node_id);
+CREATE INDEX IF NOT EXISTS idx_tips_tx ON tips(tx_hash);
 
 -- Admin
 CREATE TABLE IF NOT EXISTS admin_users (
@@ -215,8 +215,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id)
 );
-CREATE INDEX idx_admin_users_user_id ON admin_users(user_id);
-CREATE INDEX idx_admin_users_active ON admin_users(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_admin_users_user_id ON admin_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_admin_users_active ON admin_users(is_active) WHERE is_active = true;
 
 CREATE TABLE IF NOT EXISTS banned_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS banned_users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id)
 );
-CREATE INDEX idx_banned_users_user_id ON banned_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_banned_users_user_id ON banned_users(user_id);
 
 CREATE TABLE IF NOT EXISTS moderation_queue (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -247,8 +247,8 @@ CREATE TABLE IF NOT EXISTS moderation_queue (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_moderation_queue_status ON moderation_queue(status);
-CREATE INDEX idx_moderation_queue_user_id ON moderation_queue(user_id);
+CREATE INDEX IF NOT EXISTS idx_moderation_queue_status ON moderation_queue(status);
+CREATE INDEX IF NOT EXISTS idx_moderation_queue_user_id ON moderation_queue(user_id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -261,8 +261,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     user_agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_audit_log_admin_id ON audit_log(admin_id);
-CREATE INDEX idx_audit_log_created_at ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_admin_id ON audit_log(admin_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS rate_limits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -274,8 +274,8 @@ CREATE TABLE IF NOT EXISTS rate_limits (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_rate_limits_user_id ON rate_limits(user_id);
-CREATE INDEX idx_rate_limits_ip ON rate_limits(ip_address);
+CREATE INDEX IF NOT EXISTS idx_rate_limits_user_id ON rate_limits(user_id);
+CREATE INDEX IF NOT EXISTS idx_rate_limits_ip ON rate_limits(ip_address);
 
 CREATE TABLE IF NOT EXISTS default_avatars (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -297,8 +297,8 @@ CREATE TABLE IF NOT EXISTS admin_settings (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_admin_settings_key ON admin_settings(key);
-CREATE INDEX idx_admin_settings_category ON admin_settings(category);
+CREATE INDEX IF NOT EXISTS idx_admin_settings_key ON admin_settings(key);
+CREATE INDEX IF NOT EXISTS idx_admin_settings_category ON admin_settings(category);
 
 -- Alerts
 CREATE TABLE IF NOT EXISTS alert_subscriptions (
@@ -320,8 +320,8 @@ CREATE TABLE IF NOT EXISTS alert_subscriptions (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, node_id)
 );
-CREATE INDEX idx_alert_subscriptions_user ON alert_subscriptions(user_id);
-CREATE INDEX idx_alert_subscriptions_node ON alert_subscriptions(node_id);
+CREATE INDEX IF NOT EXISTS idx_alert_subscriptions_user ON alert_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_alert_subscriptions_node ON alert_subscriptions(node_id);
 
 CREATE TABLE IF NOT EXISTS alert_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -336,8 +336,8 @@ CREATE TABLE IF NOT EXISTS alert_history (
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_alert_history_subscription ON alert_history(subscription_id);
-CREATE INDEX idx_alert_history_created_at ON alert_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alert_history_subscription ON alert_history(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_alert_history_created_at ON alert_history(created_at DESC);
 
 -- API Keys
 CREATE TABLE IF NOT EXISTS api_keys (
@@ -359,9 +359,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(key_hash)
 );
-CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX idx_api_keys_key_hash ON api_keys(key_hash);
-CREATE INDEX idx_api_keys_active ON api_keys(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(is_active) WHERE is_active = true;
 
 CREATE TABLE IF NOT EXISTS api_key_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -374,8 +374,8 @@ CREATE TABLE IF NOT EXISTS api_key_usage (
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX idx_api_key_usage_key_id ON api_key_usage(key_id);
-CREATE INDEX idx_api_key_usage_created_at ON api_key_usage(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_key_id ON api_key_usage(key_id);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created_at DESC);
 
 -- Enable RLS
 ALTER TABLE nodes ENABLE ROW LEVEL SECURITY;

@@ -4,6 +4,17 @@ This directory contains configuration files for the AtlasP2P Docker services.
 
 ## Files
 
+- **entrypoint.sh**: Production container entrypoint
+  - Waits for database (Docker mode only)
+  - Runs migrations via migrate.js
+  - Starts Next.js server
+  - Skips DB steps in cloud mode (no POSTGRES_PASSWORD)
+
+- **migrate.js**: Database migration runner
+  - Tracks applied migrations in `schema_migrations` table
+  - Applies pending SQL files from `supabase/migrations/`
+  - Syncs Supabase internal user passwords with POSTGRES_PASSWORD
+
 - **kong.yml**: Kong API Gateway declarative configuration
   - Routes API requests to Supabase services (auth, rest, storage)
   - CORS configuration
