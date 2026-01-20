@@ -139,7 +139,7 @@ services:
     volumes:
       # Persist user avatars (for self-hosted deployments)
       # If using Supabase Cloud Storage, this volume is not used
-      - avatar-storage:/app/public/avatars
+      - avatar-storage:/app/apps/web/public/avatars
       # Persist Next.js build cache for faster rebuilds
       - web-next-cache:/app/apps/web/.next/cache
     depends_on:
