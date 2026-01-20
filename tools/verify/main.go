@@ -16,13 +16,14 @@ import (
 	"time"
 )
 
-// Build-time configuration (injected via ldflags)
+// Build-time configuration (injected via ldflags from build.sh)
+// These placeholders are overridden at compile time - do not use defaults
 var (
-	Version      = "2.0.0"
-	ApiUrl       = "https://nodes-dingocoin.raxtzu.com" // Default, should be overridden
-	DaemonNames  = "dingocoind,dingocoin-qt"            // Comma-separated
-	DefaultPort  = "33117"
-	ChainName    = "Dingocoin"
+	Version     = "2.0.0"
+	ApiUrl      = ""  // Injected: -X main.ApiUrl=$API_URL
+	DaemonNames = ""  // Injected: -X main.DaemonNames=$DAEMON_NAMES
+	DefaultPort = ""  // Injected: -X main.DefaultPort=$DEFAULT_PORT
+	ChainName   = ""  // Injected: -X main.ChainName=$CHAIN_NAME
 )
 
 // API Request/Response structures
@@ -68,6 +69,13 @@ type ConfirmResponse struct {
 }
 
 func main() {
+	// Validate build-time configuration
+	if ApiUrl == "" || DaemonNames == "" || DefaultPort == "" || ChainName == "" {
+		fmt.Println("ERROR: This binary was not built correctly.")
+		fmt.Println("Build-time configuration is missing. Use build.sh to compile.")
+		os.Exit(1)
+	}
+
 	printBanner()
 
 	if len(os.Args) < 2 {

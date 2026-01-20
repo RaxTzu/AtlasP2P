@@ -8,11 +8,16 @@ VERSION="2.0.0"
 OUTPUT_DIR="../../apps/web/public/verify"
 BINARY_NAME="verify"
 
-# Configuration from environment variables (with defaults for local builds)
-API_URL="${API_URL:-https://nodes-dingocoin.raxtzu.com}"
-DAEMON_NAMES="${DAEMON_NAMES:-dingocoind,dingocoin-qt}"
-DEFAULT_PORT="${DEFAULT_PORT:-33117}"
-CHAIN_NAME="${CHAIN_NAME:-Dingocoin}"
+# Configuration from environment variables (REQUIRED - no defaults)
+# CI/CD extracts these from config/project.config.yaml
+# For local builds, set these env vars or use: source .env
+if [ -z "$API_URL" ] || [ -z "$DAEMON_NAMES" ] || [ -z "$DEFAULT_PORT" ] || [ -z "$CHAIN_NAME" ]; then
+    echo "ERROR: Required environment variables not set"
+    echo "  API_URL, DAEMON_NAMES, DEFAULT_PORT, CHAIN_NAME"
+    echo ""
+    echo "For local builds, set these or run: source .env"
+    exit 1
+fi
 
 echo "╔════════════════════════════════════════════╗"
 echo "║   Building AtlasP2P Verification Binary    ║"
