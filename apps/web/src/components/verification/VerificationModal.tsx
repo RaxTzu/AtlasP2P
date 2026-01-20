@@ -1248,10 +1248,13 @@ export function VerificationModal({
                       </p>
                     </div>
                   ) : verification.method === 'http_file' ? (
-                    /* HTTP File verification - no proof input needed */
-                    <div>
+                    /* Binary verification - auto-submits, just show status */
+                    <div className="space-y-3">
                       <p className="text-sm text-muted-foreground">
-                        Click "Verify Now" below once your verification server is running on port 8080.
+                        Run the verification binary on your node server. The binary will automatically submit the verification when complete.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Check your terminal for the result, or click &quot;Check Status&quot; below to refresh.
                       </p>
                     </div>
                   ) : (
@@ -1316,7 +1319,7 @@ export function VerificationModal({
                         style={{ backgroundColor: theme.primaryColor }}
                       >
                         {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-                        {loading ? 'Verifying...' : verification.method === 'http_file' ? 'Verify Now' : 'Submit Verification'}
+                        {loading ? 'Checking...' : verification.method === 'http_file' ? 'Check Status' : 'Submit Verification'}
                       </button>
                     </div>
                   )}
