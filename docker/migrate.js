@@ -22,7 +22,8 @@ async function main() {
   const host = process.env.POSTGRES_HOST || 'db';
   const port = parseInt(process.env.POSTGRES_PORT || '5432');
   const database = process.env.POSTGRES_DB || 'postgres';
-  const user = process.env.POSTGRES_USER || 'postgres';
+  // Use supabase_admin (superuser in Supabase image) to be able to ALTER reserved roles
+  const user = process.env.POSTGRES_USER || 'supabase_admin';
 
   // Try target password first, fall back to default 'postgres' (Supabase image default)
   let pool;
