@@ -450,6 +450,43 @@ export function VerificationModal({
     setError(null);
 
     try {
+      // For http_file (binary) method, just check status - binary already submitted
+      if (verification.method === 'http_file') {
+        const response = await fetch(`/api/verify?id=${verification.verificationId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to check status');
+        }
+
+        // Check if verification is complete (approved or pending_review)
+        if (data.status === 'approved') {
+          setStep('complete');
+          if (onSuccess) {
+            setTimeout(() => {
+              onSuccess();
+              handleClose();
+            }, 2000);
+          }
+        } else if (data.status === 'pending_review' || data.status === 'submitted') {
+          // Verification submitted by binary, waiting for admin review
+          setStep('complete');
+          if (onSuccess) {
+            setTimeout(() => {
+              onSuccess();
+              handleClose();
+            }, 2000);
+          }
+        } else if (data.status === 'pending') {
+          // Binary hasn't submitted yet
+          setError('Binary verification not yet received. Run the verify command on your node server.');
+        } else {
+          throw new Error(`Verification status: ${data.status}`);
+        }
+        return;
+      }
+
+      // For other methods, submit proof
       const body: any = {
         verificationId: verification.verificationId,
         proof: proof || undefined
