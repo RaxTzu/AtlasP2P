@@ -199,21 +199,21 @@ content:
       href: https://github.com/dingocoin
       icon: github
     - name: Twitter(X)
-      href: https://x.com/yourcoin
+      href: https://x.com/dingocoincrypto
       icon: twitter
     - name: Discord
-      href: https://discord.gg/yourcoin
+      href: https://discord.com/invite/dingocoin
       icon: discord
 
   # Support/Contact information
   support:
     enabled: true
     email: support@dingocoin.com
-    discord: https://discord.gg/yourcoin
+    discord: https://discord.com/invite/dingocoin
 
   # Footer text customization
   copyrightText: Created by Dingocoin Guardians.
-  githubRepoUrl: https://github.com/RavianXReaver/Dingocoin-Nodes-Map
+  githubRepoUrl: https://github.com/dingocoin/dingocoin-nodes-map
 
 # ===========================================
 # MAP CONFIGURATION
@@ -335,12 +335,12 @@ adminConfig:
     provider: resend
 
     # Sender information (displayed in emails)
-    fromEmail: noreply.dingocoin@raxtzu.com
+    fromEmail: noreply@nodes.dingocoin.com
     fromName: Dingocoin Node Map
 
     # Optional: Alerts sender (defaults to fromEmail/fromName if not set)
     # Use different sender for system alerts vs user emails
-    alertsFromEmail: alerts.dingocoin@raxtzu.com
+    alertsFromEmail: alerts@nodes.dingocoin.com    
     alertsFromName: Dingocoin Node Map Alerts
 
     # Email verification settings
