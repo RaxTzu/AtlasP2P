@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -25,6 +24,18 @@ var (
 	DefaultPort = ""  // Injected: -X main.DefaultPort=$DEFAULT_PORT
 	ChainName   = ""  // Injected: -X main.ChainName=$CHAIN_NAME
 )
+
+// Shared HTTP client to ensure connection reuse and consistent routing
+// This helps prevent IP mismatch between init and confirm requests
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  true,
+		DisableKeepAlives:   false, // Keep connections alive
+	},
+}
 
 // API Request/Response structures
 type InitRequest struct {
@@ -114,19 +125,18 @@ func main() {
 		fmt.Printf("  ❌ No node daemon found. Expected: %s\n", DaemonNames)
 	}
 
-	// Check port
-	port, _ := strconv.Atoi(DefaultPort)
-	portListening, portMethod := checkPort(port)
+	// Check port (use the port from API, not hardcoded default)
+	portListening, portMethod := checkPort(nodePort)
 	if portListening {
-		fmt.Printf("  ✅ Port %d is listening (method: %s)\n", port, portMethod)
+		fmt.Printf("  ✅ Port %d is listening (method: %s)\n", nodePort, portMethod)
 	} else {
-		fmt.Printf("  ❌ Port %d is not listening\n", port)
+		fmt.Printf("  ❌ Port %d is not listening\n", nodePort)
 	}
 	fmt.Println()
 
 	// Step 3: Submit verification results
 	fmt.Println("Step 3/3: Submitting verification to API...")
-	if err := confirmVerification(challenge, processFound, processMethod, daemonName, portListening, portMethod, port); err != nil {
+	if err := confirmVerification(challenge, processFound, processMethod, daemonName, portListening, portMethod, nodePort); err != nil {
 		log.Fatalf("❌ Failed to submit verification: %v", err)
 	}
 
@@ -193,7 +203,7 @@ func initVerification(challenge string) (string, int, error) {
 
 	// Make API request
 	url := ApiUrl + "/api/verify-node/init"
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := httpClient
 
 	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -372,7 +382,7 @@ func confirmVerification(challenge string, processFound bool, processMethod stri
 
 	// Make API request
 	url := ApiUrl + "/api/verify-node/confirm"
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := httpClient
 
 	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
