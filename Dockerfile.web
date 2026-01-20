@@ -88,6 +88,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/
 COPY --from=builder --chown=nextjs:nodejs /app/supabase/migrations ./supabase/migrations
 COPY --chown=nextjs:nodejs docker/migrate.js ./migrate.js
 COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 USER nextjs
 EXPOSE 3000
