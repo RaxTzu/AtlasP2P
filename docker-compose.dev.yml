@@ -36,6 +36,8 @@ services:
       - ./apps/web:/app/apps/web
       - ./packages:/app/packages
       - ./config:/app/config
+      # Mount migrations for hot reload (new migrations picked up on restart)
+      - ./supabase/migrations:/app/supabase/migrations
       - /app/node_modules
       - /app/apps/web/node_modules
       - web-next-cache:/app/apps/web/.next

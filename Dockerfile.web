@@ -13,18 +13,27 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 FROM base AS development
 WORKDIR /app
 
+# Install netcat for DB health checks and pg for migrations
+RUN apk add --no-cache netcat-openbsd
+
 # Copy package files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/config/package.json ./packages/config/
 COPY packages/types/package.json ./packages/types/
 
-# Install all dependencies
-RUN pnpm install --frozen-lockfile
+# Install all dependencies (including pg for migrations)
+RUN pnpm install --frozen-lockfile && pnpm add pg --ignore-workspace
+
+# Copy migrations and entrypoint for automatic migration on startup
+COPY supabase/migrations ./supabase/migrations
+COPY docker/migrate.js ./docker/migrate.js
+COPY docker/entrypoint-dev.sh ./docker/entrypoint-dev.sh
+RUN chmod +x /app/docker/entrypoint-dev.sh
 
 # Source code mounted via volume
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm install && pnpm --filter @atlasp2p/web dev --port 4000"]
+ENTRYPOINT ["/app/docker/entrypoint-dev.sh"]
 
 # ============================================
 # PRODUCTION TARGET
