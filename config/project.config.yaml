@@ -335,12 +335,12 @@ adminConfig:
     provider: resend
 
     # Sender information (displayed in emails)
-    fromEmail: noreply@dingocoin.com
+    fromEmail: noreply@nodes.dingocoin.com
     fromName: Dingocoin Node Map
 
     # Optional: Alerts sender (defaults to fromEmail/fromName if not set)
     # Use different sender for system alerts vs user emails
-    alertsFromEmail: alerts@dingocoin.com
+    alertsFromEmail: alerts@nodes.dingocoin.com    
     alertsFromName: Dingocoin Node Map Alerts
 
     # Email verification settings
