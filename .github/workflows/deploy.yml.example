@@ -75,8 +75,10 @@ jobs:
           fi
 
           # Auto-detect secrets source if set to "auto"
+          # Note: We check secrets.AWS_SECRET_ACCESS_KEY (not vars.AWS_ACCESS_KEY_ID)
+          # because repo-level secrets are accessible without environment context
           if [ "$SECRETS_SOURCE" = "auto" ]; then
-            if [ -n "$SSM_PARAM_NAME" ] && [ -n "${{ vars.AWS_ACCESS_KEY_ID }}" ]; then
+            if [ -n "$SSM_PARAM_NAME" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
               echo "Auto-detected: AWS SSM Parameter Store"
               SECRETS_SOURCE="aws-ssm"
             elif [ -n "${{ secrets.POSTGRES_PASSWORD }}" ]; then
