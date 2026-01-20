@@ -738,7 +738,10 @@ class Crawler:
                         else:
                             last_seen_dt = last_seen
 
-                        minutes_since = (datetime.now(timezone.utc) - last_seen_dt.replace(tzinfo=None)).total_seconds() / 60
+                        # Ensure last_seen_dt is timezone-aware (assume UTC if naive)
+                        if last_seen_dt.tzinfo is None:
+                            last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
+                        minutes_since = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() / 60
 
                         # Always re-check "up" and "reachable" nodes to detect outages quickly
                         # These nodes should be checked every crawl pass
