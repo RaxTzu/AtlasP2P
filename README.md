@@ -18,9 +18,12 @@ A professional, production-ready P2P network visualization platform for cryptocu
 - **Real-time Node Discovery**: Bitcoin P2P protocol crawler with recursive peer discovery from DNS seeds
 - **Interactive Geolocation Map**: Leaflet-powered map with clustering, filtering, and node details
 - **Performance Metrics**: Node tiers (Diamond/Gold/Silver/Bronze) based on uptime, latency, and reliability
-- **Node Verification**: Prove node ownership via message signing, DNS TXT records, or user agent tags
+- **Node Verification**: Prove node ownership via message signing, DNS TXT records, HTTP binary challenge, or user agent tags
 - **Bot Protection**: Cloudflare Turnstile CAPTCHA for API endpoints (privacy-friendly, invisible verification)
 - **Operator Profiles**: Custom branding with avatars, descriptions, and social links for verified nodes
+- **Node Alerts**: Email and Discord webhook notifications for node status changes (offline/online, version outdated, tier changes)
+- **API Keys**: Programmatic access with scoped permissions, rate limiting, and key rotation
+- **Admin Dashboard**: Moderation queue, user management, audit logs, and system settings
 
 ## Live Demo
 
@@ -187,9 +190,12 @@ See **[Complete Forking Guide](./docs/FORKING.md)** for detailed instructions.
 📘 **[Complete Documentation](https://raxtzu.github.io/AtlasP2P/)** - GitHub Pages
 
 **Quick Links**:
-- **[Forking Guide](./docs/FORKING.md)** ⭐ **Start here to fork for your cryptocurrency**
+- **[Forking Guide](./docs/FORKING.md)** - Start here to fork for your cryptocurrency
 - **[Configuration Reference](./docs/config/CONFIGURATION.md)** - Complete config options
-- **[API Reference](./docs/api/API_REFERENCE.md)** - Public API endpoints
+- **[API Reference](./docs/api/API_REFERENCE.md)** - All API endpoints (public + authenticated)
+- **[Architecture](./docs/ARCHITECTURE.md)** - System design and components
+- **[Transparency & Privacy](./docs/TRANSPARENCY.md)** - What data we collect and why
+- **[Moderation Guide](./docs/MODERATION.md)** - Admin tools and moderation workflow
 - **[Deployment Guide](./docs/PRODUCTION_DEPLOYMENT.md)** - Docker, Kubernetes, AWS, VPS
 - **[Crawler Implementation](./docs/crawler/IMPLEMENTATION_GUIDE.md)** - P2P crawler details
 

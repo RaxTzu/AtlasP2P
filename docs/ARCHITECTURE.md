@@ -793,12 +793,63 @@ docker exec -i atlasp2p-db psql -U postgres -d postgres < supabase/migrations/00
 
 - [ ] Multi-chain support (Dogecoin, Litecoin, Bitcoin)
 - [ ] Mobile app (React Native)
-- [ ] Network health alerts (email/webhook)
+- [x] ~~Network health alerts (email/webhook)~~ **Implemented!** See Alert Subscriptions below.
 - [ ] Embeddable widgets (iframe badges)
-- [ ] Public API with rate limiting
+- [x] ~~Public API with rate limiting~~ **Implemented!** See API Keys below.
 - [ ] Node comparison tool
 - [ ] Historical data export (CSV/JSON)
 - [ ] Analytics dashboard with ML-based anomaly detection
+
+### 8. Node Alerts System
+
+**Purpose**: Notify node operators when their node status changes
+
+**Alert Types**:
+- Node goes offline
+- Node comes back online
+- Version becomes outdated
+- Tier changes (upgrade/downgrade)
+
+**Notification Channels**:
+- **Email**: Via Resend API, includes unsubscribe link
+- **Discord Webhook**: Rich embeds with node details
+
+**Features**:
+- Per-subscription cooldown (prevents alert spam)
+- Unsubscribe via email link without login (token-based)
+- Only for verified nodes (user must own the node)
+
+**API Endpoints**:
+- `GET /api/alerts` - List subscriptions
+- `POST /api/alerts` - Create subscription
+- `PUT /api/alerts/:id` - Update subscription
+- `DELETE /api/alerts/:id` - Delete subscription
+- `GET /api/alerts/unsubscribe?token=xxx` - Unsubscribe via email link
+
+### 9. API Keys
+
+**Purpose**: Programmatic access to public data endpoints
+
+**Available Scopes**:
+- `read:nodes` - Read node information
+- `read:stats` - Read network statistics
+- `read:leaderboard` - Read leaderboard data
+- `read:profiles` - Read node profiles
+
+**Features**:
+- Key format: `{ticker}_sk_{32chars}` (e.g., `dingo_sk_abc123...`)
+- SHA-256 hashed storage (raw key only shown once)
+- Per-key rate limiting (10-10000 requests/hour)
+- Key rotation (revoke old, create new with same settings)
+- Maximum 10 active keys per user
+- Optional expiration date
+
+**API Endpoints**:
+- `GET /api/keys` - List keys (masked)
+- `POST /api/keys` - Create key (returns raw key once)
+- `PUT /api/keys/:id` - Update key settings
+- `DELETE /api/keys/:id` - Delete key
+- `POST /api/keys/:id/rotate` - Rotate key
 
 ## Contributing
 

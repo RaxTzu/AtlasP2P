@@ -16,7 +16,23 @@ https://nodes.dingocoin.org/api  (Production)
 
 ## Authentication
 
-All endpoints listed below are **public** and do not require authentication. Rate limiting headers are included in responses.
+### Public Endpoints
+The JSON endpoints (`/api/*.json`) are **public** and do not require authentication. Rate limiting headers are included in responses.
+
+### Authenticated Endpoints
+Some endpoints require authentication via JWT (user session) or API key:
+
+**API Key Authentication:**
+```bash
+# Via Authorization header (recommended)
+curl -H "Authorization: Bearer {ticker}_sk_xxxxxxxx" https://nodes.example.com/api/nodes.json
+
+# Via X-API-Key header
+curl -H "X-API-Key: {ticker}_sk_xxxxxxxx" https://nodes.example.com/api/nodes.json
+```
+
+**Session Authentication:**
+Requires valid Supabase session cookie (for browser-based access).
 
 ## CORS Support
 
@@ -478,6 +494,534 @@ While maintaining compatibility with Bitnodes.io's API structure, this API inclu
 
 ---
 
+---
+
+## Authenticated Endpoints
+
+The following endpoints require authentication (session or API key).
+
+---
+
+### 4. GET /api/my-nodes
+
+Retrieve all nodes verified by the authenticated user.
+
+**Authentication:** Required (session)
+
+#### Example Request
+
+```bash
+curl -H "Cookie: sb-xxx-auth-token=xxx" "https://nodes.example.com/api/my-nodes"
+```
+
+#### Response Format
+
+```json
+{
+  "nodes": [
+    {
+      "id": "uuid",
+      "ip": "192.168.1.1",
+      "port": 33117,
+      "status": "up",
+      "tier": "gold",
+      "pixScore": 920,
+      "isVerified": true,
+      "verificationMethod": "message_sign",
+      "verifiedAt": "2025-01-15T10:30:00Z",
+      "displayName": "My Node",
+      "avatarUrl": "/avatars/xxx.png",
+      "countryName": "United States",
+      "city": "San Francisco"
+    }
+  ]
+}
+```
+
+---
+
+### 5. API Keys Management
+
+Create and manage API keys for programmatic access.
+
+#### Available Scopes
+
+| Scope | Description |
+|-------|-------------|
+| `read:nodes` | Read node information |
+| `read:stats` | Read network statistics |
+| `read:leaderboard` | Read leaderboard data |
+| `read:profiles` | Read node profiles |
+
+#### GET /api/keys
+
+List user's API keys (key values are masked).
+
+**Authentication:** Required (session)
+
+```bash
+curl -H "Cookie: sb-xxx-auth-token=xxx" "https://nodes.example.com/api/keys"
+```
+
+**Response:**
+```json
+{
+  "keys": [
+    {
+      "id": "uuid",
+      "name": "Production Key",
+      "keyPrefix": "dingo_sk_abc12345",
+      "description": "For my dashboard",
+      "scopes": ["read:nodes", "read:stats"],
+      "rateLimit": 1000,
+      "lastUsedAt": "2025-01-20T15:00:00Z",
+      "requestCount": 5420,
+      "isActive": true,
+      "expiresAt": null,
+      "createdAt": "2025-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+#### POST /api/keys
+
+Create a new API key.
+
+**Authentication:** Required (session)
+
+**Request Body:**
+```json
+{
+  "name": "My API Key",
+  "description": "Optional description",
+  "scopes": ["read:nodes", "read:stats"],
+  "rateLimit": 1000,
+  "expiresAt": "2026-01-01T00:00:00Z"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "key": {
+    "id": "uuid",
+    "name": "My API Key",
+    "keyPrefix": "dingo_sk_abc12345",
+    "scopes": ["read:nodes", "read:stats"],
+    "rateLimit": 1000,
+    "isActive": true,
+    "createdAt": "2025-01-21T00:00:00Z"
+  },
+  "rawKey": "dingo_sk_abc12345xyzfullkeyhere",
+  "warning": "Store this key securely. It will not be shown again."
+}
+```
+
+**Limits:**
+- Maximum 10 active API keys per user
+- Rate limit: 10-10000 requests per hour
+
+#### DELETE /api/keys/[id]
+
+Delete an API key.
+
+**Authentication:** Required (session)
+
+```bash
+curl -X DELETE "https://nodes.example.com/api/keys/{keyId}"
+```
+
+#### POST /api/keys/[id]/rotate
+
+Rotate an API key (revokes old key, creates new with same settings).
+
+**Authentication:** Required (session)
+
+```bash
+curl -X POST "https://nodes.example.com/api/keys/{keyId}/rotate"
+```
+
+---
+
+### 6. Alert Subscriptions
+
+Subscribe to node status change notifications.
+
+#### GET /api/alerts
+
+List user's alert subscriptions.
+
+**Authentication:** Required (session)
+
+```bash
+curl -H "Cookie: sb-xxx-auth-token=xxx" "https://nodes.example.com/api/alerts"
+```
+
+**Response:**
+```json
+{
+  "subscriptions": [
+    {
+      "id": "uuid",
+      "node_id": "uuid",
+      "alert_offline": true,
+      "alert_online": true,
+      "alert_version_outdated": false,
+      "alert_tier_change": false,
+      "email_enabled": true,
+      "webhook_enabled": true,
+      "webhook_url": "https://discord.com/api/webhooks/xxx",
+      "webhook_type": "discord",
+      "cooldown_minutes": 60,
+      "created_at": "2025-01-15T00:00:00Z",
+      "node": {
+        "id": "uuid",
+        "ip": "192.168.1.1",
+        "port": 33117,
+        "status": "up",
+        "country_name": "United States"
+      }
+    }
+  ]
+}
+```
+
+#### POST /api/alerts
+
+Create a new alert subscription.
+
+**Authentication:** Required (session)
+
+**Request Body:**
+```json
+{
+  "nodeId": "uuid",
+  "alertOffline": true,
+  "alertOnline": true,
+  "alertVersionOutdated": false,
+  "alertTierChange": false,
+  "emailEnabled": true,
+  "webhookEnabled": true,
+  "webhookUrl": "https://discord.com/api/webhooks/xxx/yyy",
+  "webhookType": "discord",
+  "cooldownMinutes": 60
+}
+```
+
+**Notes:**
+- `nodeId` must be a node you have verified ownership of
+- At least one notification channel (email or webhook) must be enabled
+- Cooldown prevents duplicate alerts within the specified time window
+
+#### PUT /api/alerts/[id]
+
+Update an existing subscription.
+
+#### DELETE /api/alerts/[id]
+
+Delete a subscription.
+
+#### GET /api/alerts/unsubscribe?token=xxx
+
+Unsubscribe from email alerts without logging in (token from email link).
+
+**Authentication:** None (token-based)
+
+```bash
+curl "https://nodes.example.com/api/alerts/unsubscribe?token=64hexchars"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "You have been successfully unsubscribed from email alerts.",
+  "nodeInfo": {
+    "ip": "192.168.1.1",
+    "port": 33117
+  }
+}
+```
+
+#### GET /api/alerts/history
+
+Get user's alert history (sent notifications).
+
+**Authentication:** Required (session)
+
+**Query Parameters:**
+- `limit`: Max results (default: 50)
+- `offset`: Pagination offset (default: 0)
+- `nodeId`: Filter by specific node
+
+**Response:**
+```json
+{
+  "history": [
+    {
+      "id": "uuid",
+      "subscription_id": "uuid",
+      "node_id": "uuid",
+      "alert_type": "offline",
+      "email_sent": true,
+      "webhook_sent": true,
+      "message": "Node MyNode offline",
+      "created_at": "2025-01-20T15:30:00Z",
+      "node": {
+        "ip": "192.168.1.1",
+        "port": 33117,
+        "country_name": "United States"
+      }
+    }
+  ],
+  "pagination": {
+    "limit": 50,
+    "offset": 0,
+    "total": 125
+  }
+}
+```
+
+---
+
+### 7. Node Registration
+
+Manually register a node (if not discovered by crawler).
+
+#### POST /api/nodes/register
+
+**Authentication:** Required (session)
+
+**Request Body:**
+```json
+{
+  "ip": "192.168.1.1",
+  "port": 33117
+}
+```
+
+**Process:**
+1. Validates IP and port format
+2. Probes the node to verify it's reachable (TCP connection test)
+3. If reachable, adds to database with `source: "manual"`
+4. Crawler will update full details on next pass
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Node registered successfully! The crawler will update its details shortly.",
+  "node": {
+    "id": "uuid",
+    "ip": "192.168.1.1",
+    "port": 33117,
+    "status": "up"
+  }
+}
+```
+
+**Errors:**
+- `409 Conflict`: Node already registered
+- `422 Unprocessable`: Node not reachable
+
+#### GET /api/nodes/register
+
+Get nodes registered by the authenticated user.
+
+**Authentication:** Required (session)
+
+---
+
+### 8. Admin Endpoints
+
+Administrative endpoints for moderation and user management.
+
+**Authentication:** Required (admin session - email must be in ADMIN_EMAILS or admin_users table)
+
+#### GET /api/admin/check
+
+Check if current user is an admin.
+
+```json
+{
+  "isAdmin": true,
+  "role": "super_admin"
+}
+```
+
+#### GET /api/admin/moderation
+
+Get moderation queue (pending verifications, profile changes, avatars).
+
+**Query Parameters:**
+- `status`: `pending`, `approved`, `rejected`, `all` (default: `pending`)
+- `type`: `verification`, `profile`, `avatar`, `all` (default: `all`)
+- `page`, `limit`: Pagination
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "item_type": "verification",
+      "item_id": "uuid",
+      "user_id": "uuid",
+      "user_email": "user@example.com",
+      "status": "pending",
+      "created_at": "2025-01-20T00:00:00Z",
+      "node_info": {
+        "ip": "192.168.1.1",
+        "port": 33117,
+        "country_name": "United States"
+      },
+      "verification_info": {
+        "method": "http_file",
+        "created_at": "2025-01-20T00:00:00Z"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 15,
+    "pages": 1
+  }
+}
+```
+
+#### POST /api/admin/moderation
+
+Review a moderation item.
+
+**Request Body:**
+```json
+{
+  "itemId": "uuid",
+  "action": "approve",
+  "notes": "Optional review notes"
+}
+```
+
+**Actions:** `approve`, `reject`, `flag`
+
+#### GET /api/admin/users
+
+List all users with admin management options.
+
+#### POST /api/admin/users/[id]/ban
+
+Ban a user.
+
+#### GET /api/admin/audit
+
+Get admin audit logs.
+
+#### GET /api/admin/settings
+
+Get admin settings.
+
+---
+
+### 9. Internal/Cron Endpoints
+
+These endpoints are called by internal services (crawler, cron jobs). Protected by API keys set in environment variables.
+
+#### POST /api/alerts/process
+
+Process pending alerts based on node status changes. Called by crawler after each pass.
+
+**Authentication:** Bearer token (`ALERTS_PROCESS_KEY` env var)
+
+```bash
+curl -X POST -H "Authorization: Bearer $ALERTS_PROCESS_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"checkMinutes": 10}' \
+  "https://nodes.example.com/api/alerts/process"
+```
+
+**Request Body:**
+```json
+{
+  "checkMinutes": 10
+}
+```
+
+**Process:**
+1. Finds nodes with status changes in the last N minutes
+2. Matches against alert subscriptions
+3. Sends email and/or webhook notifications
+4. Records alert history
+5. Respects cooldown settings
+
+**Response:**
+```json
+{
+  "processed": 5,
+  "sent": 3,
+  "details": ["192.168.1.1:offline:sub-uuid", "..."]
+}
+```
+
+#### POST /api/cron/snapshots
+
+Create a network snapshot for historical tracking. **Deprecated** - snapshots are now created automatically by the crawler.
+
+**Authentication:** Bearer token (`CRON_SECRET` env var)
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  "https://nodes.example.com/api/cron/snapshots"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Snapshot created",
+  "timestamp": "2025-01-21T00:00:00Z",
+  "totalNodes": 1234,
+  "onlineNodes": 1200
+}
+```
+
+#### GET /api/cron/snapshots
+
+Get the latest snapshot information.
+
+**Authentication:** None
+
+```json
+{
+  "lastSnapshot": "2025-01-21T00:00:00Z",
+  "totalNodes": 1234,
+  "onlineNodes": 1200
+}
+```
+
+---
+
+### 10. GET /api/health
+
+Health check endpoint for monitoring.
+
+**Authentication:** None
+
+```bash
+curl "https://nodes.example.com/api/health"
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-21T00:00:00Z"
+}
+```
+
+---
+
 ## Support
 
 For issues or questions about the API:
@@ -486,5 +1030,5 @@ For issues or questions about the API:
 
 ---
 
-**Last Updated:** 2025-12-11
-**API Version:** 1.0.0
+**Last Updated:** 2026-01-21
+**API Version:** 1.1.0
