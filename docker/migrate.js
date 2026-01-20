@@ -84,6 +84,7 @@ async function main() {
     if (files.length === 0) {
       console.log('[Migrate] No pending migrations');
       await syncPasswords(pool, targetPassword);
+      await syncAdminUsers(pool);
       return; // Clean exit
     }
 
@@ -108,6 +109,7 @@ async function main() {
     }
 
     await syncPasswords(pool, targetPassword);
+    await syncAdminUsers(pool);
     console.log('[Migrate] Done');
   } finally {
     await pool.end();
@@ -134,6 +136,59 @@ async function syncPasswords(pool, password) {
     }
   }
   console.log('[Migrate] ✓ Synced passwords');
+}
+
+/**
+ * Sync ADMIN_EMAILS from environment to admin_users table.
+ * This ensures admins defined in config automatically get database access.
+ */
+async function syncAdminUsers(pool) {
+  const adminEmails = process.env.ADMIN_EMAILS;
+  if (!adminEmails) {
+    console.log('[Migrate] No ADMIN_EMAILS configured, skipping admin sync');
+    return;
+  }
+
+  const emails = adminEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (emails.length === 0) {
+    return;
+  }
+
+  console.log(`[Migrate] Syncing ${emails.length} admin email(s) to admin_users...`);
+
+  for (const email of emails) {
+    try {
+      // Look up user by email in auth.users
+      const { rows } = await pool.query(
+        `SELECT id FROM auth.users WHERE LOWER(email) = $1`,
+        [email]
+      );
+
+      if (rows.length === 0) {
+        console.log(`[Migrate] Admin email ${email} not found in auth.users (user not registered yet)`);
+        continue;
+      }
+
+      const userId = rows[0].id;
+
+      // Upsert into admin_users with super_admin role
+      await pool.query(`
+        INSERT INTO public.admin_users (user_id, role, is_active, created_at, updated_at)
+        VALUES ($1, 'super_admin', true, NOW(), NOW())
+        ON CONFLICT (user_id)
+        DO UPDATE SET
+          role = 'super_admin',
+          is_active = true,
+          updated_at = NOW()
+      `, [userId]);
+
+      console.log(`[Migrate] ✓ Admin synced: ${email} (${userId})`);
+    } catch (err) {
+      console.error(`[Migrate] ✗ Failed to sync admin ${email}:`, err.message);
+    }
+  }
+
+  console.log('[Migrate] ✓ Admin users synced');
 }
 
 main().catch(err => {
