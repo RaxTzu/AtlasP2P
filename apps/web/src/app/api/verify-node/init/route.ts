@@ -108,16 +108,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract request IP (prioritize Cloudflare header for real client IP)
-    // Strip port if present (e.g., "172.71.24.8:9588" -> "172.71.24.8")
     let requestIp = request.headers.get('cf-connecting-ip') ||
                     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
                     request.headers.get('x-real-ip') ||
                     'unknown';
-    // Remove port suffix if present
-    if (requestIp.includes(':') && !requestIp.includes('[')) {
+
+    // Handle IPv4 with port (e.g., "192.168.1.1:8080" -> "192.168.1.1")
+    // IPv6 has multiple colons, IPv4 with port has exactly one
+    const colonCount = (requestIp.match(/:/g) || []).length;
+    if (colonCount === 1) {
       // IPv4 with port - strip the port
       requestIp = requestIp.split(':')[0];
     }
+    // IPv6 addresses (multiple colons) are kept as-is
 
     // Store the request IP in the verification record for step 2 validation
     const { error: updateError } = await supabase
