@@ -27,7 +27,7 @@ A professional, production-ready P2P network visualization platform for cryptocu
 
 ## Live Demo
 
-- **Dingocoin Network**: [nodes.raxtzu.com](https://nodes-dingocoin.raxtzu.com) (example deployment)
+- **Dingocoin Network**: [nodes.dingocoin.com](https://nodes.dingocoin.com) (example deployment)
 
 ## Quick Start
 
