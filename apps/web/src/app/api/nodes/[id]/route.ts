@@ -1,7 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { NodeWithProfile } from '@atlasp2p/types'
-import { isAdmin } from '@/lib/admin'
+import { isUserAdmin } from '@/lib/security'
 
 /**
  * Transform database snake_case to TypeScript camelCase
@@ -149,7 +149,7 @@ export async function DELETE(
   }
 
   // Check if user is admin
-  const userIsAdmin = await isAdmin(user.id)
+  const userIsAdmin = await isUserAdmin(user.id)
 
   // Use admin client to access full node data (including registered_by)
   const adminClient = createAdminClient()
