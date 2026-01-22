@@ -3,16 +3,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyDnsTxt } from '@/lib/verification'
 import { rateLimit, RATE_LIMITS } from '@/lib/security'
 
+// Per-verification cooldown: 1 check per 30 seconds
+// This allows 60-second auto-polling while preventing abuse
+const DNS_CHECK_COOLDOWN = {
+  maxRequests: 1,
+  windowMs: 30 * 1000 // 30 seconds
+};
+
 /**
  * Check DNS TXT record for a pending verification
  *
  * This endpoint can be polled to check if DNS has propagated.
- * Rate limited to prevent abuse.
+ * Rate limited to prevent abuse with both global and per-verification limits.
  */
 export async function POST(request: NextRequest) {
-  // Rate limit DNS check attempts (same as verification)
-  const rateLimitResult = await rateLimit(request, 'verify:dns-check', RATE_LIMITS.VERIFY);
-  if (!rateLimitResult.allowed) {
+  // Global rate limit for DNS checks (per user/IP)
+  const globalRateLimitResult = await rateLimit(request, 'verify:dns-check', RATE_LIMITS.VERIFY);
+  if (!globalRateLimitResult.allowed) {
     return NextResponse.json(
       { error: 'Too many DNS check attempts. Please try again later.' },
       { status: 429 }
@@ -62,6 +69,24 @@ export async function POST(request: NextRequest) {
       { error: 'This endpoint is only for DNS verification' },
       { status: 400 }
     )
+  }
+
+  // Per-verification cooldown: prevents bypassing client-side cooldowns
+  // This is server-side enforcement that cannot be bypassed by clearing localStorage
+  const perVerificationRateLimit = await rateLimit(
+    request,
+    `dns-check:verification:${verificationId}`,
+    DNS_CHECK_COOLDOWN
+  );
+  if (!perVerificationRateLimit.allowed) {
+    const waitSeconds = Math.ceil((perVerificationRateLimit.resetAt.getTime() - Date.now()) / 1000);
+    return NextResponse.json(
+      {
+        error: `Please wait ${waitSeconds} seconds before checking again.`,
+        retryAfter: waitSeconds
+      },
+      { status: 429 }
+    );
   }
 
   if (verification.status !== 'pending') {
