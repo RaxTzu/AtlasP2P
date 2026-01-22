@@ -146,14 +146,15 @@ export function DraggablePanel({
   }, [isDragging, dragOffset]);
 
   // Get position classes based on snap position
+  // Uses responsive positioning: left-4 on mobile, left-[21rem] (after stats panel) on desktop
   const getPositionClasses = () => {
     const positions: Record<SnapPosition, string> = {
-      'top-left': 'top-4 left-[21rem]', // After stats panel
+      'top-left': 'top-4 left-4 lg:left-[21rem]', // After stats panel on desktop
       'top-center': 'top-4 left-1/2 -translate-x-1/2',
       'top-right': 'top-4 right-4',
-      'middle-left': 'top-1/2 -translate-y-1/2 left-[21rem]',
+      'middle-left': 'top-1/2 -translate-y-1/2 left-4 lg:left-[21rem]',
       'middle-right': 'top-1/2 -translate-y-1/2 right-4',
-      'bottom-left': 'bottom-24 left-[21rem]', // Above map controls
+      'bottom-left': 'bottom-24 left-4 lg:left-[21rem]', // Above map controls
       'bottom-center': 'bottom-24 left-1/2 -translate-x-1/2', // Above map controls
       'bottom-right': 'bottom-24 right-4', // Above map controls
     };

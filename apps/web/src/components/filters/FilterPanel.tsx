@@ -105,7 +105,7 @@ export function FilterPanel() {
                       onClick={() =>
                         setStatus(option.value === 'all' ? undefined : option.value)
                       }
-                      className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      className={`flex-1 px-2 py-2.5 sm:py-1.5 text-xs font-semibold rounded-lg transition-all ${
                         isActive
                           ? 'text-white shadow-md'
                           : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
@@ -134,7 +134,7 @@ export function FilterPanel() {
                       onClick={() =>
                         setTier(option.value === 'all' ? undefined : option.value)
                       }
-                      className={`px-2.5 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-start gap-2 ${
+                      className={`px-2.5 py-3 sm:py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-start gap-2 ${
                         isActive
                           ? 'text-white shadow-md'
                           : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border'
@@ -157,7 +157,7 @@ export function FilterPanel() {
               </div>
               <button
                 onClick={() => setVerifiedOnly(!filters.isVerified)}
-                className={`relative w-9 h-5 rounded-full transition-all duration-300 ${
+                className={`relative w-11 h-6 sm:w-9 sm:h-5 rounded-full transition-all duration-300 ${
                   filters.isVerified ? '' : 'bg-muted-foreground/30'
                 }`}
                 style={
@@ -167,8 +167,8 @@ export function FilterPanel() {
                 }
               >
                 <span
-                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${
-                    filters.isVerified ? 'left-4.5' : 'left-0.5'
+                  className={`absolute top-0.5 sm:top-0.5 w-5 h-5 sm:w-4 sm:h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${
+                    filters.isVerified ? 'left-5 sm:left-4.5' : 'left-0.5'
                   }`}
                 />
               </button>

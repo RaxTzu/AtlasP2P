@@ -55,7 +55,7 @@ export function NodePopup({ node }: NodePopupProps) {
   const uptimeColor = getUptimeColor();
 
   return (
-    <div className="min-w-[320px] max-w-[380px] overflow-hidden rounded-lg shadow-xl">
+    <div className="w-[280px] sm:min-w-[320px] sm:max-w-[380px] overflow-hidden rounded-lg shadow-xl">
       {/* Tier-specific header with gradient */}
       <div
         className="p-4 text-white relative overflow-hidden"
