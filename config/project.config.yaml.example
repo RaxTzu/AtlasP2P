@@ -207,6 +207,23 @@ content:
   copyrightText: Created by YourCoin Community.
   githubRepoUrl: https://github.com/RaxTzu/AtlasP2P
 
+  # SEO Configuration (all optional - defaults to siteName/siteDescription if not set)
+  seo:
+    # title: YourCoin Network Nodes - Live Map & Analytics  # Override siteName for SEO
+    # titleTemplate: "%s | YourCoin Nodes"  # Page title template
+    # description: Track YourCoin nodes worldwide in real-time  # Override siteDescription
+    keywords:
+      - yourcoin
+      - nodes
+      - blockchain
+      - network map
+      - decentralized
+      - p2p
+      - cryptocurrency
+    twitterHandle: "@yourcoin"  # For Twitter cards
+    # ogImage: /logos/yourcoin-og.png  # Override ogImagePath
+    robots: "index, follow"
+
   # Support contact configuration (shown when errors occur)
   support:
     enabled: true

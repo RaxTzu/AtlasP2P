@@ -917,6 +917,50 @@ docker exec -i atlasp2p-db psql -U postgres -d postgres < supabase/migrations/00
 - `DELETE /api/keys/:id` - Delete key
 - `POST /api/keys/:id/rotate` - Rotate key
 
+## Optional Integrations
+
+### Analytics (PostHog)
+
+**Purpose**: Product analytics, user behavior tracking, feature usage
+
+**Setup**:
+1. Create account at [posthog.com](https://posthog.com) (free tier available)
+2. Add environment variables:
+   ```bash
+   NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_key
+   NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com  # or https://us.i.posthog.com
+   ```
+3. Analytics automatically enabled when keys are present
+4. Respects Do Not Track browser setting
+
+**Features**:
+- Automatic page view tracking
+- Session recording (optional)
+- Feature flags (optional)
+- Completely optional - app works without it
+
+### SEO Customization
+
+**Configuration**: All SEO settings in `config/project.config.yaml`:
+
+```yaml
+content:
+  siteName: "YourCoin Nodes Map"
+  siteDescription: "Real-time network visualization"
+  seo:
+    title: "Custom SEO Title"  # Override siteName
+    titleTemplate: "%s | YourCoin"  # Page title format
+    description: "Custom meta description"
+    keywords:
+      - yourcoin
+      - nodes
+      - blockchain
+    twitterHandle: "@yourcoin"
+    robots: "index, follow"
+```
+
+**Auto-generated if not specified**: Title, description, keywords from chain config.
+
 ## Contributing
 
 See CONTRIBUTING.md for development guidelines.

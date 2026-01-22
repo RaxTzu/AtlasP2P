@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
 import { loadProjectConfig } from '@/lib/config.server';
 import { ConfigProvider } from '@/providers/ConfigProvider';
+import { PostHogProvider } from '@/providers/PostHogProvider';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import './globals.css';
@@ -12,35 +13,45 @@ const theme = config.themeConfig;
 const chainConfig = config.chainConfig;
 const content = config.content;
 const assets = config.assets;
+const seo = content.seo;
+
+// Build SEO metadata with config overrides
+const seoTitle = seo?.title || content.siteName;
+const seoDescription = seo?.description || content.siteDescription;
+const seoKeywords = seo?.keywords || [chainConfig.name, chainConfig.ticker, 'nodes', 'network', 'blockchain', 'map', 'decentralized', 'p2p'];
+const seoOgImage = seo?.ogImage || assets.ogImagePath;
 
 export const metadata: Metadata = {
   title: {
-    template: `%s | ${content.siteName}`,
-    default: content.siteName,
+    template: seo?.titleTemplate || `%s | ${content.siteName}`,
+    default: seoTitle,
   },
-  description: content.siteDescription,
-  keywords: [chainConfig.name, chainConfig.ticker, 'nodes', 'network', 'blockchain', 'map'],
+  description: seoDescription,
+  keywords: seoKeywords,
   metadataBase: new URL(content.siteUrl),
+  robots: seo?.robots || 'index, follow',
   openGraph: {
-    title: content.siteName,
-    description: content.siteDescription,
-    url: content.siteUrl,
+    title: seoTitle,
+    description: seoDescription,
+    url: seo?.canonicalUrl || content.siteUrl,
     siteName: content.siteName,
     images: [
       {
-        url: assets.ogImagePath,
+        url: seoOgImage,
         width: 1200,
         height: 630,
-        alt: `${content.siteName} - ${content.siteDescription}`,
+        alt: `${content.siteName} - ${seoDescription}`,
       },
     ],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: content.siteName,
-    description: content.siteDescription,
-    images: [assets.ogImagePath],
+    title: seoTitle,
+    description: seoDescription,
+    images: [seoOgImage],
+    creator: seo?.twitterHandle,
+    site: seo?.twitterHandle,
   },
 };
 
@@ -56,18 +67,20 @@ export default function RootLayout({
         <meta name="theme-color" content={theme.primaryColor} />
       </head>
       <body className="min-h-screen flex flex-col">
-        <ConfigProvider config={config}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <Header />
-            <main className="flex-1 scrollbar-thin">{children}</main>
-            <Footer />
-          </ThemeProvider>
-        </ConfigProvider>
+        <PostHogProvider>
+          <ConfigProvider config={config}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <Header />
+              <main className="flex-1 scrollbar-thin">{children}</main>
+              <Footer />
+            </ThemeProvider>
+          </ConfigProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

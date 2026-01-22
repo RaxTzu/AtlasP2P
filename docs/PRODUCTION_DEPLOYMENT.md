@@ -241,6 +241,11 @@ TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
 # Optional: Custom domain
 DOMAIN=nodes.dingocoin.com
 ACME_EMAIL=admin@dingocoin.com
+
+# Optional: Analytics (PostHog)
+# Get keys from: https://posthog.com/ (free tier available)
+NEXT_PUBLIC_POSTHOG_KEY=phc_your_project_key
+NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com  # or https://us.i.posthog.com
 ```
 
 ### Required for Crawler

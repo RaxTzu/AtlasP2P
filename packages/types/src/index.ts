@@ -400,6 +400,17 @@ export interface SupportContact {
   discord?: string;
 }
 
+export interface SEOConfig {
+  title?: string;
+  titleTemplate?: string;
+  description?: string;
+  keywords?: string[];
+  twitterHandle?: string;
+  ogImage?: string;
+  robots?: string;
+  canonicalUrl?: string;
+}
+
 export interface ContentConfig {
   siteName: string;
   siteDescription: string;
@@ -414,6 +425,7 @@ export interface ContentConfig {
   copyrightText?: string;
   githubRepoUrl?: string;
   support?: SupportContact;
+  seo?: SEOConfig;
 }
 
 // -------------------------------------------

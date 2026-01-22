@@ -53,7 +53,7 @@ export const TurnstileActionSchema = z.enum(['verification', 'tipping', 'profile
 
 export const EmailProviderSchema = z.enum(['resend', 'sendgrid', 'smtp', 'disabled']);
 
-export const AnalyticsProviderSchema = z.enum(['plausible', 'google', 'matomo', 'fathom']).nullable();
+export const AnalyticsProviderSchema = z.enum(['plausible', 'google', 'matomo', 'fathom', 'posthog']).nullable();
 
 export const TileProviderSchema = z.enum(['openstreetmap', 'mapbox', 'carto-dark']);
 
@@ -172,6 +172,17 @@ export const SupportContactSchema = z.object({
   }
 );
 
+export const SEOConfigSchema = z.object({
+  title: z.string().optional(), // Override siteName for SEO title
+  titleTemplate: z.string().optional(), // e.g., "%s | Dingocoin Nodes"
+  description: z.string().optional(), // Override siteDescription
+  keywords: z.array(z.string()).optional(), // Custom keywords
+  twitterHandle: z.string().optional(), // @handle for Twitter cards
+  ogImage: z.string().optional(), // Override ogImagePath
+  robots: z.string().optional(), // e.g., "index, follow"
+  canonicalUrl: z.string().optional(),
+}).optional();
+
 export const ContentConfigSchema = z.object({
   siteName: z.string().min(1, 'Site name is required'),
   siteDescription: z.string().min(1, 'Site description is required'),
@@ -182,6 +193,7 @@ export const ContentConfigSchema = z.object({
   copyrightText: z.string().optional(),
   githubRepoUrl: URLSchema.optional(),
   support: SupportContactSchema.optional(),
+  seo: SEOConfigSchema,
 });
 
 // ===========================================
