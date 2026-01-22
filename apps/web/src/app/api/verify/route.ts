@@ -838,73 +838,61 @@ export async function DELETE(request: NextRequest) {
     )
   }
 
-  // First check if the verification exists and belongs to user (using admin client to bypass RLS)
-  const { data: verification, error: fetchError } = await adminClient
-    .from('verifications')
-    .select('id, status, user_id')
-    .eq('id', verificationId)
-    .single()
-
-  if (fetchError || !verification) {
-    console.warn('[Verification] Verification not found for deletion', {
-      verificationId,
-      userId: user.id,
-      error: fetchError?.message,
-    });
-    return NextResponse.json(
-      { error: 'Verification not found', code: 'VERIFICATION_NOT_FOUND' },
-      { status: 404 }
-    )
-  }
-
-  if (verification.user_id !== user.id) {
-    console.warn('[Verification] User attempted to delete another user\'s verification', {
-      verificationId,
-      requestingUserId: user.id,
-      verificationUserId: verification.user_id,
-    });
-    return NextResponse.json(
-      { error: 'You can only cancel your own verifications', code: 'FORBIDDEN' },
-      { status: 403 }
-    )
-  }
-
-  // Allow canceling pending or pending_approval verifications
-  if (verification.status !== VerificationStatus.PENDING && verification.status !== VerificationStatus.PENDING_APPROVAL) {
-    console.warn('[Verification] Attempted to cancel verification with invalid status', {
-      verificationId,
-      userId: user.id,
-      status: verification.status,
-    });
-    return NextResponse.json(
-      {
-        error: `Cannot cancel verification with status: ${verification.status}`,
-        code: 'INVALID_STATUS'
-      },
-      { status: 400 }
-    )
-  }
-
-  // Delete the verification using admin client (bypasses RLS)
-  const { error } = await adminClient
+  // ATOMIC DELETE: Combine ownership check, status check, and delete in single query
+  // This prevents race conditions where verification could be deleted/modified between checks
+  const { data: deletedVerification, error } = await adminClient
     .from('verifications')
     .delete()
     .eq('id', verificationId)
+    .eq('user_id', user.id)  // Ownership check
+    .in('status', [VerificationStatus.PENDING, VerificationStatus.PENDING_APPROVAL])  // Status check
+    .select('id, status, user_id')
+    .single()
 
-  if (error) {
-    console.error('[Verification] Failed to delete verification', {
+  // If no row was deleted, figure out why for the correct error message
+  if (error || !deletedVerification) {
+    // Check if verification exists at all
+    const { data: existingVerification } = await adminClient
+      .from('verifications')
+      .select('id, status, user_id')
+      .eq('id', verificationId)
+      .single()
+
+    if (!existingVerification) {
+      console.warn('[Verification] Verification not found for deletion', {
+        verificationId,
+        userId: user.id,
+      });
+      return NextResponse.json(
+        { error: 'Verification not found', code: 'VERIFICATION_NOT_FOUND' },
+        { status: 404 }
+      )
+    }
+
+    if (existingVerification.user_id !== user.id) {
+      console.warn('[Verification] User attempted to delete another user\'s verification', {
+        verificationId,
+        requestingUserId: user.id,
+        verificationUserId: existingVerification.user_id,
+      });
+      return NextResponse.json(
+        { error: 'You can only cancel your own verifications', code: 'FORBIDDEN' },
+        { status: 403 }
+      )
+    }
+
+    // Must be wrong status
+    console.warn('[Verification] Attempted to cancel verification with invalid status', {
       verificationId,
       userId: user.id,
-      error: error.message,
-      code: error.code,
+      status: existingVerification.status,
     });
     return NextResponse.json(
       {
-        error: 'Failed to cancel verification',
-        code: 'DELETE_FAILED',
-        details: error.message
+        error: `Cannot cancel verification with status: ${existingVerification.status}`,
+        code: 'INVALID_STATUS'
       },
-      { status: 500 }
+      { status: 400 }
     )
   }
 
