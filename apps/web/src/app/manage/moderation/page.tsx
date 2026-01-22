@@ -54,6 +54,10 @@ interface ModerationItem {
   content_url: string | null;
   content_data: any;
   created_at: string;
+  flagged_by: string | null;
+  flagged_by_email: string | null;
+  flagged_at: string | null;
+  flagged_reason: string | null;
   node_info?: {
     ip: string;
     port: number;
@@ -80,7 +84,7 @@ export default function ModerationPage() {
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'flagged' | 'all'>('pending');
   const [reasonModal, setReasonModal] = useState<{
     itemId: string;
     action: 'reject' | 'flag';
@@ -153,6 +157,7 @@ export default function ModerationPage() {
   };
 
   const pendingCount = items.filter(i => i.status === 'pending').length;
+  const flaggedCount = items.filter(i => i.status === 'flagged').length;
 
   if (loading) {
     return (
@@ -189,6 +194,24 @@ export default function ModerationPage() {
               filter === 'pending' ? 'bg-white/20' : 'bg-yellow-500 text-white'
             }`}>
               {pendingCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setFilter('flagged')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'flagged'
+              ? 'text-white'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+          style={filter === 'flagged' ? { backgroundColor: '#f59e0b' } : {}}
+        >
+          Flagged
+          {flaggedCount > 0 && (
+            <span className={`ml-2 px-2 py-0.5 text-xs font-bold rounded-full ${
+              filter === 'flagged' ? 'bg-white/20' : 'bg-orange-500 text-white'
+            }`}>
+              {flaggedCount}
             </span>
           )}
         </button>
@@ -244,12 +267,37 @@ export default function ModerationPage() {
                           ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
                           : item.status === 'approved'
                           ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                          : item.status === 'flagged'
+                          ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
                           : 'bg-red-500/15 text-red-600 dark:text-red-400'
                       }`}
                     >
                       {item.status}
                     </span>
                   </div>
+
+                  {/* Flagged Info */}
+                  {item.status === 'flagged' && item.flagged_by_email && (
+                    <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                      <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="font-medium">Flagged for review</span>
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        <span>By: </span>
+                        <span className="font-medium">{item.flagged_by_email}</span>
+                        {item.flagged_at && (
+                          <span> on {new Date(item.flagged_at).toLocaleString()}</span>
+                        )}
+                      </div>
+                      {item.flagged_reason && (
+                        <div className="mt-1 text-sm">
+                          <span className="text-muted-foreground">Reason: </span>
+                          <span>{item.flagged_reason}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Avatar Preview */}
                   {item.item_type === 'avatar' && item.content_url && (
@@ -602,7 +650,7 @@ export default function ModerationPage() {
                 </div>
 
                 {/* Actions */}
-                {item.status === 'pending' && (
+                {(item.status === 'pending' || item.status === 'flagged') && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReview(item.id, 'approve')}
@@ -624,14 +672,17 @@ export default function ModerationPage() {
                     >
                       <XCircle className="h-5 w-5" />
                     </button>
-                    <button
-                      onClick={() => setReasonModal({ itemId: item.id, action: 'flag' })}
-                      disabled={reviewing === item.id}
-                      className="p-3 bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/25 rounded-xl transition-all duration-200 disabled:opacity-50 hover:scale-110 active:scale-95"
-                      title="Flag for review"
-                    >
-                      <AlertTriangle className="h-5 w-5" />
-                    </button>
+                    {/* Only show flag button for pending items (not already flagged) */}
+                    {item.status === 'pending' && (
+                      <button
+                        onClick={() => setReasonModal({ itemId: item.id, action: 'flag' })}
+                        disabled={reviewing === item.id}
+                        className="p-3 bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/25 rounded-xl transition-all duration-200 disabled:opacity-50 hover:scale-110 active:scale-95"
+                        title="Flag for review"
+                      >
+                        <AlertTriangle className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

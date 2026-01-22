@@ -162,12 +162,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get flagged_by email if item was flagged
+    let flaggedByEmail = null;
+    if (item.flagged_by) {
+      try {
+        const { data: { user: flagger } } = await adminClient.auth.admin.getUserById(item.flagged_by);
+        flaggedByEmail = flagger?.email || null;
+      } catch (e) {
+        console.error('Failed to get flagger email:', e);
+      }
+    }
+
     return {
       ...item,
       user_email: userEmail,
       node_info: nodeInfo,
       verification_info: verificationInfo,
-      profile_info: profileInfo
+      profile_info: profileInfo,
+      flagged_by_email: flaggedByEmail
     };
   }));
 
@@ -243,14 +255,23 @@ export async function POST(request: NextRequest) {
   }
 
   // Update moderation queue
+  const updateData: Record<string, any> = {
+    status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'flagged',
+    reviewed_by: user.id,
+    reviewed_at: new Date().toISOString(),
+    review_notes: notes
+  };
+
+  // If flagging, also track who flagged and when
+  if (action === 'flag') {
+    updateData.flagged_by = user.id;
+    updateData.flagged_at = new Date().toISOString();
+    updateData.flagged_reason = notes;
+  }
+
   const { error: updateError } = await supabase
     .from('moderation_queue')
-    .update({
-      status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'flagged',
-      reviewed_by: user.id,
-      reviewed_at: new Date().toISOString(),
-      review_notes: notes
-    })
+    .update(updateData)
     .eq('id', itemId);
 
   if (updateError) {
