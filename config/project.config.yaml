@@ -517,7 +517,7 @@ deployment:
     # Source: auto (will detect available secrets), aws-ssm, github-secrets, or manual
     source: auto
     # AWS SSM Parameter Store path
-    ssmPath: /atlasp2p/prod/env
+    ssmPath: /Dingocoin/NodesMap/Production
 
   # Docker Registry configuration
   registry:
