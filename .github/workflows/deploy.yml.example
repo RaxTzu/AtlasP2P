@@ -13,6 +13,18 @@ on:
         options:
           - production
           - staging
+      skip_build:
+        description: 'Skip build and use latest images'
+        type: boolean
+        default: false
+      force_build_web:
+        description: 'Force web image rebuild'
+        type: boolean
+        default: false
+      force_build_crawler:
+        description: 'Force crawler image rebuild'
+        type: boolean
+        default: false
 
 env:
   NODE_VERSION: '20'
@@ -22,11 +34,102 @@ env:
 
 jobs:
   # ===========================================
+  # JOB 0: DETECT CHANGES
+  # ===========================================
+  # Smart change detection - only rebuild what changed
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      crawler: ${{ steps.filter.outputs.crawler }}
+      verify: ${{ steps.filter.outputs.verify }}
+      infra: ${{ steps.filter.outputs.infra }}
+      should_build_web: ${{ steps.should-build.outputs.web }}
+      should_build_crawler: ${{ steps.should-build.outputs.crawler }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+              - 'config/**'
+              - 'Dockerfile.web'
+            crawler:
+              - 'apps/crawler/**'
+              - 'packages/**'
+              - 'config/**'
+              - 'Dockerfile.crawler'
+            verify:
+              - 'tools/verify/**'
+            infra:
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+              - 'docker-compose.cloud-prod.yml'
+              - 'docker/**'
+
+      - name: Determine what to build
+        id: should-build
+        run: |
+          # Web: build if web files changed, force requested, or manual dispatch without skip
+          WEB_CHANGED="${{ steps.filter.outputs.web }}"
+          CRAWLER_CHANGED="${{ steps.filter.outputs.crawler }}"
+          SKIP_BUILD="${{ inputs.skip_build }}"
+          FORCE_WEB="${{ inputs.force_build_web }}"
+          FORCE_CRAWLER="${{ inputs.force_build_crawler }}"
+          IS_MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+
+          # Default to building on push if changed, or on manual dispatch unless skip_build
+          if [ "$SKIP_BUILD" = "true" ]; then
+            BUILD_WEB="false"
+            BUILD_CRAWLER="false"
+          elif [ "$FORCE_WEB" = "true" ]; then
+            BUILD_WEB="true"
+          elif [ "$IS_MANUAL" = "true" ] && [ "$WEB_CHANGED" != "true" ]; then
+            # Manual dispatch without force - still build if explicitly requested
+            BUILD_WEB="false"
+          else
+            BUILD_WEB="$WEB_CHANGED"
+          fi
+
+          if [ "$SKIP_BUILD" = "true" ]; then
+            BUILD_CRAWLER="false"
+          elif [ "$FORCE_CRAWLER" = "true" ]; then
+            BUILD_CRAWLER="true"
+          elif [ "$IS_MANUAL" = "true" ] && [ "$CRAWLER_CHANGED" != "true" ]; then
+            BUILD_CRAWLER="false"
+          else
+            BUILD_CRAWLER="$CRAWLER_CHANGED"
+          fi
+
+          # On push events, if nothing specific changed, build both (safety)
+          if [ "$IS_MANUAL" != "true" ] && [ "$WEB_CHANGED" != "true" ] && [ "$CRAWLER_CHANGED" != "true" ]; then
+            echo "No specific changes detected on push - building both for safety"
+            BUILD_WEB="true"
+            BUILD_CRAWLER="true"
+          fi
+
+          echo "web=$BUILD_WEB" >> $GITHUB_OUTPUT
+          echo "crawler=$BUILD_CRAWLER" >> $GITHUB_OUTPUT
+
+          echo "Build decisions:"
+          echo "  Web changed: $WEB_CHANGED -> Build web: $BUILD_WEB"
+          echo "  Crawler changed: $CRAWLER_CHANGED -> Build crawler: $BUILD_CRAWLER"
+          echo "  Skip build: $SKIP_BUILD"
+          echo "  Force web: $FORCE_WEB"
+          echo "  Force crawler: $FORCE_CRAWLER"
+
+  # ===========================================
   # JOB 1: DETECT CONFIGURATION
   # ===========================================
   detect-config:
     name: Detect Configuration
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       secrets_source: ${{ steps.detect.outputs.secrets_source }}
       ssm_param_name: ${{ steps.detect.outputs.ssm_param_name }}
@@ -115,7 +218,11 @@ jobs:
   build-verify-binaries:
     name: Build Verification Binaries
     runs-on: ubuntu-latest
-    needs: detect-config
+    needs: [detect-changes, detect-config]
+    # Only build if web will be built (binaries go in web image) or verify tools changed
+    if: |
+      needs.detect-changes.outputs.should_build_web == 'true' ||
+      needs.detect-changes.outputs.verify == 'true'
 
     steps:
       - name: Checkout
@@ -189,8 +296,15 @@ jobs:
   build-and-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    needs: [detect-config, build-verify-binaries]
-    if: always() && needs.detect-config.result == 'success' && needs.build-verify-binaries.result == 'success'
+    needs: [detect-changes, detect-config, build-verify-binaries]
+    # Run if at least one image needs building and config is ready
+    # build-verify-binaries may be skipped if only crawler changed
+    if: |
+      always() &&
+      needs.detect-config.result == 'success' &&
+      (needs.build-verify-binaries.result == 'success' || needs.build-verify-binaries.result == 'skipped') &&
+      (needs.detect-changes.outputs.should_build_web == 'true' || needs.detect-changes.outputs.should_build_crawler == 'true')
+    environment: production
     permissions:
       contents: read
       packages: write
@@ -200,14 +314,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Download verification binaries BEFORE building Docker image
+      # Download verification binaries BEFORE building Docker image (only if building web)
       - name: Download verification binaries
+        if: needs.detect-changes.outputs.should_build_web == 'true' && needs.build-verify-binaries.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: verify-binaries
           path: apps/web/public/verify/
 
       - name: Verify binaries were downloaded
+        if: needs.detect-changes.outputs.should_build_web == 'true' && needs.build-verify-binaries.result == 'success'
         run: |
           echo "Verification binaries:"
           ls -lh apps/web/public/verify/
@@ -216,6 +332,12 @@ jobs:
             exit 1
           fi
           echo "Verification binaries ready for Docker build"
+
+      - name: Create placeholder for verify binaries (crawler-only build)
+        if: needs.detect-changes.outputs.should_build_web != 'true'
+        run: |
+          echo "Skipping verify binaries - not building web image"
+          mkdir -p apps/web/public/verify/
 
       # SECURITY: Fetch secrets directly (no artifacts)
       - name: Fetch secrets from AWS SSM
@@ -282,6 +404,8 @@ jobs:
           echo "NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_ENABLE_TURNSTILE=$NEXT_PUBLIC_ENABLE_TURNSTILE" >> $GITHUB_OUTPUT
           echo "NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=$NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST" >> $GITHUB_OUTPUT
 
           echo "Extracted NEXT_PUBLIC_* variables for build"
 
@@ -362,6 +486,7 @@ jobs:
 
       - name: Extract metadata for web
         id: meta-web
+        if: needs.detect-changes.outputs.should_build_web == 'true'
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.registry.outputs.url }}/${{ steps.registry-config.outputs.image_base }}web
@@ -371,6 +496,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push web image
+        if: needs.detect-changes.outputs.should_build_web == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -386,9 +512,16 @@ jobs:
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             NEXT_PUBLIC_ENABLE_TURNSTILE=${{ steps.build-env.outputs.NEXT_PUBLIC_ENABLE_TURNSTILE }}
             NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS=${{ steps.build-env.outputs.NEXT_PUBLIC_TURNSTILE_PROTECTED_ACTIONS }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ steps.build-env.outputs.NEXT_PUBLIC_POSTHOG_KEY }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ steps.build-env.outputs.NEXT_PUBLIC_POSTHOG_HOST }}
+
+      - name: Skip web build
+        if: needs.detect-changes.outputs.should_build_web != 'true'
+        run: echo "Skipping web image build - no web changes detected"
 
       - name: Extract metadata for crawler
         id: meta-crawler
+        if: needs.detect-changes.outputs.should_build_crawler == 'true'
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.registry.outputs.url }}/${{ steps.registry-config.outputs.image_base }}crawler
@@ -398,6 +531,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push crawler image
+        if: needs.detect-changes.outputs.should_build_crawler == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -407,6 +541,10 @@ jobs:
           labels: ${{ steps.meta-crawler.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Skip crawler build
+        if: needs.detect-changes.outputs.should_build_crawler != 'true'
+        run: echo "Skipping crawler image build - no crawler changes detected"
 
       # SECURITY: Clean up deployment.env - do NOT upload as artifact
       - name: Clean up secrets
@@ -419,11 +557,13 @@ jobs:
   backup:
     name: Backup Database
     runs-on: ubuntu-latest
-    needs: [detect-config, build-and-push]
+    needs: [detect-changes, detect-config, build-and-push]
     if: |
+      always() &&
       needs.detect-config.outputs.backup_enabled == 'true' &&
       needs.detect-config.outputs.deployment_mode == 'self-hosted-docker' &&
-      github.ref == 'refs/heads/master'
+      github.ref == 'refs/heads/master' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
     environment: production
 
     steps:
@@ -465,11 +605,11 @@ jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
-    needs: [detect-config, build-verify-binaries, build-and-push, backup]
+    needs: [detect-changes, detect-config, build-verify-binaries, build-and-push, backup]
     if: |
       always() &&
       github.ref == 'refs/heads/master' &&
-      needs.build-and-push.result == 'success' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
       (needs.backup.result == 'success' || needs.backup.result == 'skipped')
     environment: production
 
@@ -697,7 +837,7 @@ jobs:
   health-check:
     name: Health Check
     runs-on: ubuntu-latest
-    needs: [detect-config, deploy]
+    needs: [detect-changes, detect-config, deploy]
     if: |
       always() &&
       needs.detect-config.outputs.health_check_enabled == 'true' &&
@@ -748,7 +888,7 @@ jobs:
   rollback:
     name: Rollback Deployment
     runs-on: ubuntu-latest
-    needs: [detect-config, backup, deploy, health-check]
+    needs: [detect-changes, detect-config, backup, deploy, health-check]
     if: |
       always() &&
       needs.detect-config.outputs.rollback_enabled == 'true' &&
