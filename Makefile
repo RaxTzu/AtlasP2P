@@ -266,6 +266,12 @@ logs-auth: ## Show auth (GoTrue) logs
 config-check: ## Validate project.config.yaml
 	@node scripts/validate-config.mjs
 
+config-sync: ## Sync missing keys from .example to project.config.yaml
+	@node scripts/config-sync.mjs
+
+config-sync-dry: ## Preview what config-sync would add (no changes)
+	@node scripts/config-sync.mjs --dry-run
+
 config-reload: ## Reload config (restart web)
 	@echo "$(CYAN)Reloading configuration...$(RESET)"
 	@docker compose $(COMPOSE_DOCKER) restart web 2>/dev/null || docker compose $(COMPOSE_CLOUD) restart web

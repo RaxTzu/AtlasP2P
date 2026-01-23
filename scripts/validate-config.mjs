@@ -2,6 +2,9 @@
 /**
  * Config Validation Script
  * Checks project.config.yaml for missing fields compared to .example
+ *
+ * - Required keys: FAILS if missing
+ * - Optional keys: WARNS but passes (app has defaults)
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -15,10 +18,50 @@ const colors = {
   yellow: '\x1b[33m',
   red: '\x1b[31m',
   cyan: '\x1b[36m',
+  dim: '\x1b[2m',
 };
 
 function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+// Keys that are OPTIONAL - app provides defaults if missing
+// These will only WARN, not FAIL validation
+const OPTIONAL_KEY_PATTERNS = [
+  // Version-specific marker features (new in recent updates)
+  /^themeConfig\.versionStatusColors/,
+  /^assets\.markerIcon/,
+  /^assets\.overrideAvatarWhenOutdated/,
+
+  // Optional chain config
+  /^chainConfig\.releasesUrl$/,
+  /^chainConfig\.latestReleaseUrl$/,
+  /^chainConfig\.messagePrefix$/,
+  /^chainConfig\.addressPrefix$/,
+  /^chainConfig\.pubKeyHash$/,
+
+  // Optional theme/UI
+  /^themeConfig\.semanticColors/,
+  /^themeConfig\.markerCategories/,
+
+  // Optional content
+  /^content\.copyrightText$/,
+  /^content\.githubRepoUrl$/,
+  /^content\.support/,
+  /^content\.seo/,
+
+  // Deployment config (not needed for local dev)
+  /^deployment\./,
+
+  // Debug/dev features
+  /^features\.debug/,
+  /^features\.errorTracking/,
+  /^features\.performance/,
+  /^features\.analytics/,
+];
+
+function isOptionalKey(key) {
+  return OPTIONAL_KEY_PATTERNS.some(pattern => pattern.test(key));
 }
 
 function findMissingKeys(defaults, project, prefix = '') {
@@ -73,28 +116,44 @@ function main() {
 
   // Check config version
   if (project.configVersion !== example.configVersion) {
-    log(`\n⚠  Config schema version mismatch!`, 'yellow');
-    log(`   Your config: v${project.configVersion || 'unknown'}`, 'yellow');
-    log(`   Latest:      v${example.configVersion}`, 'yellow');
-    log(`   You may be missing new fields`, 'cyan');
+    log(`\n⚠  Config schema version mismatch`, 'yellow');
+    log(`   Your config: v${project.configVersion || 'unknown'}`, 'dim');
+    log(`   Latest:      v${example.configVersion}`, 'dim');
   }
 
   // Deep key comparison
-  const missingKeys = findMissingKeys(example, project);
+  const allMissingKeys = findMissingKeys(example, project);
 
-  if (missingKeys.length > 0) {
-    log(`\n⚠  Missing ${missingKeys.length} config key(s):`, 'yellow');
-    missingKeys.forEach(key => {
-      log(`   - ${key}`, 'yellow');
+  // Separate required vs optional
+  const requiredMissing = allMissingKeys.filter(key => !isOptionalKey(key));
+  const optionalMissing = allMissingKeys.filter(key => isOptionalKey(key));
+
+  // Report optional missing (warning only)
+  if (optionalMissing.length > 0) {
+    log(`\n💡 Missing ${optionalMissing.length} optional key(s):`, 'dim');
+    optionalMissing.forEach(key => {
+      log(`   - ${key}`, 'dim');
+    });
+    log(`   (App will use defaults - run 'make config-sync' to add them)`, 'dim');
+  }
+
+  // Report required missing (error)
+  if (requiredMissing.length > 0) {
+    log(`\n✗ Missing ${requiredMissing.length} required config key(s):`, 'red');
+    requiredMissing.forEach(key => {
+      log(`   - ${key}`, 'red');
     });
     log(`\n💡 Add these to config/project.config.yaml`, 'cyan');
-    log(`   Or copy from config/project.config.yaml.example`, 'cyan');
-    log(`\n   Examples: config/examples/dingocoin.yaml`, 'cyan');
+    log(`   Or run: make config-sync`, 'cyan');
     process.exit(1);
   }
 
   log('\n✓ Configuration is valid!', 'green');
-  log(`  All ${Object.keys(example).length} top-level keys present`, 'green');
+  if (optionalMissing.length > 0) {
+    log(`  ${Object.keys(example).length} top-level keys present (${optionalMissing.length} optional keys using defaults)`, 'green');
+  } else {
+    log(`  All ${Object.keys(example).length} top-level keys present`, 'green');
+  }
   process.exit(0);
 }
 
