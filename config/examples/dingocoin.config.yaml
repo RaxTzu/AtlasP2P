@@ -61,10 +61,10 @@ chainConfig:
   # magicBytes: Network magic bytes in hex (4 bytes, e.g., "f9beb4d9" for Bitcoin)
   # userAgentPatterns: List of regex patterns to match node user agents
   #   Each pattern should capture the version number as the last group
-  #   Examples: "/Satoshi:([0-9.]+)/" for Bitcoin, "/(Dingocoin|Core):([0-9.]+)/" for your coin
+  #   Examples: "/Satoshi:([0-9.]+)/" for Bitcoin, "/(Gotoshi|Dingocoin|Core):([0-9.]+)/" captures multiple client names
   magicBytes: "fbc0b6db"
   userAgentPatterns:
-    - "/(Dingocoin|Core):([0-9.]+)/"
+    - "/(Gotoshi|Dingocoin|Core):([0-9.]+)/"
 
 # ===========================================
 # THEME & BRANDING
