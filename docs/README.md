@@ -42,8 +42,9 @@
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System design, tech stack, API endpoints, database schema | Understanding the codebase |
-| **[DEVELOPER.md](./DEVELOPER.md)** | Development workflow, testing, contributing | Contributing code |
+| **[DEVELOPER.md](./DEVELOPER.md)** | Development workflow, testing, contributing, package docs | Contributing code |
 | **[MODERATION.md](./MODERATION.md)** | Admin moderation system, content workflow | Managing user content |
+| **[Config Package](https://github.com/RaxTzu/AtlasP2P/blob/main/packages/config/README.md)** | Config validation system, adding new config fields | Working with configuration |
 
 ## 🚀 Quick Commands
 

@@ -535,6 +535,50 @@ RESEND_API_KEY=your-resend-api-key
 
 ---
 
+## Package Documentation
+
+AtlasP2P uses a monorepo structure with shared packages. Each package has its own documentation:
+
+### @atlasp2p/config
+
+**Configuration validation system** - Comprehensive runtime validation for `project.config.yaml` using Zod schemas.
+
+**Key features:**
+- Fail-fast validation prevents invalid config from reaching production
+- Type-safe with full TypeScript support
+- Clear error messages with field paths and validation rules
+- Complete coverage of all config fields
+
+**Documentation:** [`packages/config/README.md`](https://github.com/RaxTzu/AtlasP2P/blob/main/packages/config/README.md)
+
+**Developer guide included:**
+- [Adding new config fields](https://github.com/RaxTzu/AtlasP2P/blob/main/packages/config/README.md#adding-new-config-fields-developer-guide)
+- Required vs optional fields
+- Schema patterns with defaults
+- Backward compatibility best practices
+- Breaking change migration guide
+
+**Quick example:**
+```typescript
+// Server-side only
+import { autoLoadConfig } from '@atlasp2p/config/loader.server';
+const config = autoLoadConfig(); // Validates on load
+
+// Client-side (already validated)
+import { getProjectConfig } from '@atlasp2p/config';
+const config = getProjectConfig();
+```
+
+### @atlasp2p/types
+
+**Shared TypeScript types** - Common type definitions used across web app and packages.
+
+Types are automatically inferred from Zod schemas - no manual type updates needed!
+
+**Location:** `packages/types/src/`
+
+---
+
 ## Getting Help
 
 - **Documentation**: Check this guide and linked resources

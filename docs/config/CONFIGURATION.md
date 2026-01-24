@@ -12,6 +12,12 @@ This guide explains every configuration option in `/config/project.config.yaml` 
 docker restart atlasp2p-web
 ```
 
+**For developers adding new config fields:** See the comprehensive developer guide in [`packages/config/README.md`](https://github.com/RaxTzu/AtlasP2P/blob/main/packages/config/README.md#adding-new-config-fields-developer-guide) for:
+- Required vs optional field decisions
+- Schema patterns with defaults
+- Backward compatibility best practices
+- Breaking change migration guide
+
 ## Table of Contents
 
 1. [Project Identity](#project-identity)

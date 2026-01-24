@@ -195,12 +195,231 @@ node test-validation-simple.js
 pnpm typecheck --filter @atlasp2p/config
 ```
 
-### Adding New Validation Rules
+### Adding New Config Fields (Developer Guide)
 
-1. Update the Zod schema in `src/schema.ts`
-2. Run typecheck to ensure type compatibility
-3. Test with malformed config to verify error messages
-4. Update this README with new validation rules
+This comprehensive guide explains how to add or modify config validation while maintaining backward compatibility and fork friendliness.
+
+#### Step 1: Decide Required vs Optional
+
+**Make a field REQUIRED when:**
+- ✅ The app **cannot function** without it (e.g., `chainConfig.name`, `chainConfig.p2pPort`)
+- ✅ There's **no sensible default** (e.g., chain-specific magic bytes)
+- ✅ It's **critical for security** (e.g., admin emails for alerts)
+
+**Make a field OPTIONAL when:**
+- ✅ It's a **nice-to-have feature** (e.g., custom marker icons, analytics)
+- ✅ There's a **sensible default** (e.g., `overrideAvatarWhenOutdated: false`)
+- ✅ It only affects **specific features** that might not be used
+- ✅ **Backward compatibility** - existing forks shouldn't break
+
+**Example:**
+```typescript
+// ❌ BAD - Makes all existing forks break if they don't have this field
+newFeature: z.boolean(),
+
+// ✅ GOOD - Optional with default, backward compatible
+newFeature: z.boolean().optional().default(false),
+
+// ✅ ALSO GOOD - Optional, no default (truly optional)
+customIcon: z.string().optional(),
+```
+
+#### Step 2: Choose the Right Schema Pattern
+
+**Pattern A: Required field**
+```typescript
+// Use when: Field is critical, no sensible default
+fieldName: z.string().min(1, 'Field name is required'),
+```
+
+**Pattern B: Optional with default**
+```typescript
+// Use when: Has sensible default, backward compatible
+fieldName: z.boolean().optional().default(false),
+fieldName: z.number().optional().default(100),
+fieldName: z.string().optional().default('default-value'),
+```
+
+**Pattern C: Optional without default (nullable)**
+```typescript
+// Use when: Truly optional, null/undefined is valid
+fieldName: z.string().optional(),
+fieldName: z.string().nullable(),
+```
+
+**Pattern D: Optional with fallback logic**
+```typescript
+// Use when: Default depends on other fields
+// Set as optional, handle fallback in code
+markerIconPath: z.string().optional(),  // Falls back to logoPath in code
+```
+
+#### Step 3: Update the Schema
+
+**Location:** `packages/config/src/schema.ts`
+
+**Example: Adding a new optional field to assets config**
+```typescript
+export const AssetsConfigSchema = z.object({
+  logoPath: z.string().min(1, 'Logo path is required'),
+  faviconPath: z.string().min(1, 'Favicon path is required'),
+  ogImagePath: z.string().min(1, 'OG image path is required'),
+
+  // Optional fields with defaults
+  markerIconPath: z.string().optional(),
+  markerIconOutdatedPath: z.string().optional(),
+  markerIconCriticalPath: z.string().optional(),
+  markerIconOfflinePath: z.string().optional(),
+
+  // NEW: Add your field here
+  myNewFeature: z.boolean().optional().default(true),
+});
+```
+
+#### Step 4: Update TypeScript Types
+
+The types are automatically inferred from the schema via:
+```typescript
+// packages/types/src/config.ts
+import type { ProjectConfigSchema } from '@atlasp2p/config/schema';
+import type { z } from 'zod';
+
+export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
+```
+
+**No manual type updates needed!** Zod automatically generates the types.
+
+#### Step 5: Add Error Messages
+
+**Good error messages are critical:**
+
+```typescript
+// ❌ BAD - Generic error
+port: z.number(),
+
+// ✅ GOOD - Specific, actionable error
+port: z.number().int().min(1).max(65535, 'Port must be between 1 and 65535'),
+
+// ✅ BETTER - Include example
+version: z.string().regex(
+  /^\d+\.\d+\.\d+$/,
+  'Version must be in format X.Y.Z (e.g., "1.18.0")'
+),
+```
+
+#### Step 6: Test Your Schema
+
+**Create a test config:**
+```yaml
+# test-invalid.yaml
+assets:
+  logoPath: /logos/logo.png
+  faviconPath: /logos/favicon.ico
+  ogImagePath: /logos/og.png
+  myNewFeature: "not-a-boolean"  # Should fail
+```
+
+**Test validation:**
+```typescript
+import { ProjectConfigSchema } from '@atlasp2p/config/schema';
+import * as yaml from 'js-yaml';
+import * as fs from 'fs';
+
+const rawConfig = yaml.load(fs.readFileSync('test-invalid.yaml', 'utf8'));
+const result = ProjectConfigSchema.safeParse(rawConfig);
+
+if (!result.success) {
+  console.log(result.error.errors);
+  // Should show: assets.myNewFeature: Expected boolean, received string
+}
+```
+
+#### Step 7: Update Example Configs
+
+**Add the new field to all example configs:**
+```bash
+# Update these files:
+config/examples/dingocoin.config.yaml
+config/examples/dogecoin.config.yaml
+# ... any other example configs
+```
+
+**Use sensible defaults for examples:**
+```yaml
+assets:
+  logoPath: /logos/atlasp2p.svg
+  faviconPath: /logos/atlasp2p-favicon.ico
+  ogImagePath: /logos/atlasp2p-og.png
+  # Optional fields - show as commented examples
+  # markerIconPath: /icons/marker.png
+  # myNewFeature: true
+```
+
+#### Step 8: Update Documentation
+
+1. **Update this README:**
+   - Add field to validation coverage section
+   - Add common error example if applicable
+
+2. **Update config docs:**
+   - `docs/config/CONFIGURATION.md` - Document the new field
+   - Include purpose, valid values, and examples
+
+3. **Update changelog/release notes:**
+   - Mention new optional field
+   - Note that it's backward compatible (or breaking change if required)
+
+#### Breaking Changes (Required Fields)
+
+**If you MUST add a required field:**
+
+1. **Announce it in advance** - Give forks time to update
+2. **Provide migration guide** - Show exact YAML to add
+3. **Version bump** - Indicate breaking change (major version)
+4. **Consider transition period** - Make optional first, required later
+
+**Example migration guide:**
+```markdown
+## Breaking Change: New Required Field
+
+**Action Required:** Add this to your `project.config.yaml`:
+
+```yaml
+newSection:
+  requiredField: "value"  # Replace with your chain's value
+```
+
+**Why:** This field is required for [feature/security reason].
+**Impact:** Server won't start without this field.
+```
+
+#### Best Practices Summary
+
+**DO:**
+- ✅ Use `.optional().default(value)` for backward compatibility
+- ✅ Provide clear, actionable error messages with examples
+- ✅ Test with both valid and invalid configs
+- ✅ Document all new fields thoroughly
+- ✅ Keep example configs up to date
+
+**DON'T:**
+- ❌ Add required fields without migration plan
+- ❌ Use generic error messages ("Invalid value")
+- ❌ Forget to update TypeScript types (Zod does this automatically)
+- ❌ Skip testing with malformed config
+- ❌ Break existing forks unnecessarily
+
+#### Quick Checklist
+
+Before committing schema changes:
+
+- [ ] Field is optional with default (unless truly required)
+- [ ] Error messages are clear and include examples
+- [ ] Tested with both valid and invalid values
+- [ ] All example configs updated
+- [ ] Documentation updated (README, CONFIGURATION.md)
+- [ ] TypeScript compilation passes (`pnpm typecheck`)
+- [ ] No breaking changes for existing forks (or migration guide provided)
 
 ## Production Deployment
 

@@ -848,7 +848,7 @@ docker exec -i atlasp2p-db psql -U postgres -d postgres < supabase/migrations/00
 
 1. **Row Level Security**: All tables protected with RLS policies
 2. **JWT Validation**: All authenticated requests validated
-3. **Input Validation**: Zod schemas for API inputs
+3. **Input Validation**: Zod schemas for API inputs and runtime config validation (see [`packages/config/README.md`](https://github.com/RaxTzu/AtlasP2P/blob/main/packages/config/README.md))
 4. **SQL Injection**: PostgREST parameterizes all queries
 5. **XSS Protection**: React escapes all user content
 6. **CORS Configuration**: Restricted to allowed origins
