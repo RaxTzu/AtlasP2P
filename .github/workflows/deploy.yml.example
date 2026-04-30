@@ -576,36 +576,37 @@ jobs:
 
       - name: Create database backup
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'BACKUP_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} bash -s << 'BACKUP_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
+            should_backup=true
             if [ ! -f docker-compose.yml ]; then
               echo "First deploy detected (no docker-compose.yml) - skipping backup"
-              exit 0
-            fi
-
-            if ! docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --status running --services 2>/dev/null | grep -qx db; then
+              should_backup=false
+            elif ! docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --status running --services 2>/dev/null | grep -qx db; then
               echo "Database container not running - skipping backup (likely first deploy or post-failure)"
-              exit 0
+              should_backup=false
             fi
 
-            BACKUP_DIR="backups"
-            mkdir -p "$BACKUP_DIR"
+            if [ "$should_backup" = "true" ]; then
+              BACKUP_DIR="backups"
+              mkdir -p "$BACKUP_DIR"
 
-            BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql"
+              BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).sql"
 
-            echo "Creating database backup: $BACKUP_FILE"
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
+              echo "Creating database backup: $BACKUP_FILE"
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U postgres > "$BACKUP_FILE"
 
-            if [ ! -s "$BACKUP_FILE" ]; then
-              echo "Error: Backup file is empty"
-              exit 1
+              if [ ! -s "$BACKUP_FILE" ]; then
+                echo "Error: Backup file is empty"
+                exit 1
+              fi
+
+              ls -t "$BACKUP_DIR"/backup-*.sql | tail -n +8 | xargs -r rm
+
+              echo "Backup complete: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
             fi
-
-            ls -t "$BACKUP_DIR"/backup-*.sql | tail -n +8 | xargs -r rm
-
-            echo "Backup complete: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
           BACKUP_SCRIPT
 
   # ===========================================
@@ -915,7 +916,7 @@ jobs:
 
       - name: Rollback to previous state
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} << 'ROLLBACK_SCRIPT'
+          ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} bash -s << 'ROLLBACK_SCRIPT'
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
@@ -925,23 +926,22 @@ jobs:
 
             if [ ! -f docker-compose.yml ]; then
               echo "First deploy failed before compose files landed - nothing to roll back"
-              exit 0
-            fi
-
-            LATEST_BACKUP=$(ls -t backups/backup-*.sql 2>/dev/null | head -n 1)
-
-            if [ -z "$LATEST_BACKUP" ]; then
-              echo "No backup found - skipping DB restore (first deploy or backup disabled)"
             else
-              echo "Restoring database from: $LATEST_BACKUP"
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml stop web crawler
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
-              echo "Database restored"
-            fi
+              LATEST_BACKUP=$(ls -t backups/backup-*.sql 2>/dev/null | head -n 1)
 
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml restart
-            sleep 5
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+              if [ -z "$LATEST_BACKUP" ]; then
+                echo "No backup found - skipping DB restore (first deploy or backup disabled)"
+              else
+                echo "Restoring database from: $LATEST_BACKUP"
+                docker compose -f docker-compose.yml -f docker-compose.prod.yml stop web crawler
+                docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db psql -U postgres < "$LATEST_BACKUP"
+                echo "Database restored"
+              fi
+
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml restart
+              sleep 5
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+            fi
 
             echo "ROLLBACK COMPLETE"
           ROLLBACK_SCRIPT
