@@ -580,6 +580,16 @@ jobs:
             set -e
             cd ${{ vars.DEPLOY_PATH }}
 
+            if [ ! -f docker-compose.yml ]; then
+              echo "First deploy detected (no docker-compose.yml) - skipping backup"
+              exit 0
+            fi
+
+            if ! docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --status running --services 2>/dev/null | grep -qx db; then
+              echo "Database container not running - skipping backup (likely first deploy or post-failure)"
+              exit 0
+            fi
+
             BACKUP_DIR="backups"
             mkdir -p "$BACKUP_DIR"
 
@@ -913,10 +923,15 @@ jobs:
             echo "DEPLOYMENT FAILED - INITIATING ROLLBACK"
             echo "====================================="
 
+            if [ ! -f docker-compose.yml ]; then
+              echo "First deploy failed before compose files landed - nothing to roll back"
+              exit 0
+            fi
+
             LATEST_BACKUP=$(ls -t backups/backup-*.sql 2>/dev/null | head -n 1)
 
             if [ -z "$LATEST_BACKUP" ]; then
-              echo "ERROR: No backup found"
+              echo "No backup found - skipping DB restore (first deploy or backup disabled)"
             else
               echo "Restoring database from: $LATEST_BACKUP"
               docker compose -f docker-compose.yml -f docker-compose.prod.yml stop web crawler
