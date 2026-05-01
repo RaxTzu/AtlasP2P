@@ -232,7 +232,10 @@ export default function HomePage() {
         <div className="absolute bottom-20 lg:bottom-4 right-3 lg:right-4 z-[55] flex items-center gap-3 lg:gap-2">
 
           {/* Map Style Dropdown - MOBILE: 48x48px | DESKTOP: 40x40px */}
-          <div className="relative" data-style-dropdown>
+          {/* No "relative" on mobile so the dropdown anchors to the outer
+              flex container's right edge (= viewport right) and stays in
+              view; on lg+ it anchors above its own button as before. */}
+          <div className="lg:relative" data-style-dropdown>
             <button
               onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
               className="bg-card/90 backdrop-blur-xl rounded-xl lg:rounded-lg shadow-lg border border-border
