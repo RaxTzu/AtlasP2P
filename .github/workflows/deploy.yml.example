@@ -702,12 +702,19 @@ jobs:
 
       - name: Sync compose files to server
         run: |
-          echo "Syncing docker-compose files and docker/ directory..."
+          echo "Syncing docker-compose files, docker/, config/ and supabase/migrations/ to server..."
           scp -i ~/.ssh/deploy_key docker-compose.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
           scp -i ~/.ssh/deploy_key docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
           scp -i ~/.ssh/deploy_key docker-compose.cloud-prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/ 2>/dev/null || true
           scp -ri ~/.ssh/deploy_key docker/ ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
-          echo "Synced compose files and docker/ directory"
+          # config/ and supabase/migrations/ are mounted into containers at runtime
+          # (see docker-compose.prod.yml volumes). Ship them so host overlay matches repo.
+          scp -ri ~/.ssh/deploy_key config/ ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/
+          if [ -d supabase/migrations ]; then
+            ssh -i ~/.ssh/deploy_key ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }} "mkdir -p ${{ vars.DEPLOY_PATH }}/supabase"
+            scp -ri ~/.ssh/deploy_key supabase/migrations ${{ vars.DEPLOY_USER }}@${{ vars.SSH_HOST }}:${{ vars.DEPLOY_PATH }}/supabase/
+          fi
+          echo "Synced compose files, docker/, config/, and migrations"
 
       # Fetch deployment.env for Caddyfile generation only (needed for SITE_URL)
       - name: Fetch config for Caddyfile
