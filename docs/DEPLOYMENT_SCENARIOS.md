@@ -236,7 +236,8 @@ cp docker/Caddyfile.host.example /tmp/nodesmap.Caddyfile
 
 # 2. Edit with your actual values (from .env):
 #    - SITE_URL → https://nodes.yourchain.com
-#    - API_EXTERNAL_URL → https://nodes.yourchain.com/supabase
+#    - API_EXTERNAL_URL → https://nodes.yourchain.com/supabase/auth/v1
+#      (must include /auth/v1 so GoTrue email links land on Kong's /auth/v1/ route)
 #    - WEB_PORT → localhost:4000
 #    - KONG_PORT → localhost:4020
 nano /tmp/nodesmap.Caddyfile
