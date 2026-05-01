@@ -91,6 +91,13 @@ services:
       GOTRUE_SMTP_PASS: ${SMTP_PASS}
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
       GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      # Optional Send-Email Auth Hook (Standard Webhooks). When enabled,
+      # GoTrue POSTs email payloads to GOTRUE_HOOK_SEND_EMAIL_URI instead of
+      # using SMTP. Used on hosts where outbound SMTP is blocked (e.g. DO).
+      # Defaults are empty/false so existing deployments remain unaffected.
+      GOTRUE_HOOK_SEND_EMAIL_ENABLED: ${GOTRUE_HOOK_SEND_EMAIL_ENABLED:-false}
+      GOTRUE_HOOK_SEND_EMAIL_URI: ${GOTRUE_HOOK_SEND_EMAIL_URI:-}
+      GOTRUE_HOOK_SEND_EMAIL_SECRETS: ${GOTRUE_HOOK_SEND_EMAIL_SECRETS:-}
     depends_on:
       db:
         condition: service_healthy
