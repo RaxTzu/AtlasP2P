@@ -43,6 +43,7 @@ function transformNode(dbNode: any): NodeWithProfile {
     connectionType: dbNode.connection_type || 'ipv4',
     status: dbNode.status || 'pending',
     lastSeen: dbNode.last_seen,
+    lastHandshakeAt: dbNode.last_handshake_at ?? null,
     firstSeen: dbNode.first_seen || new Date().toISOString(),
     timesSeen: dbNode.times_seen || 0,
     latencyMs: dbNode.latency_ms,

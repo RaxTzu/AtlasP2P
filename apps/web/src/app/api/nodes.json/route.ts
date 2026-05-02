@@ -141,6 +141,12 @@ export async function GET(request: NextRequest) {
         // Extended fields beyond Bitnodes
         status: node.status,
         last_seen: node.last_seen ? Math.floor(new Date(node.last_seen).getTime() / 1000) : null,
+        // Unix seconds of last successful version/verack handshake.
+        // null when the node has never been observed completing handshake
+        // (e.g. a TCP-only "reachable" peer on the wrong chain).
+        last_handshake_at: node.last_handshake_at
+          ? Math.floor(new Date(node.last_handshake_at).getTime() / 1000)
+          : null,
         latency_ms: node.latency_avg ? parseFloat(node.latency_avg) : null,
         uptime_percentage: node.uptime ? parseFloat(node.uptime) : null,
         reliability: node.reliability ? parseFloat(node.reliability) : null,

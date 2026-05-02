@@ -259,6 +259,15 @@ export const CrawlerConfigSchema = z.object({
   retryBackoffMultiplier: z.number().min(1).max(10, 'Retry backoff multiplier must be between 1 and 10'),
   fallbackProtocolVersions: z.array(z.number().int().positive('Protocol version must be positive')),
   requireVersionForSave: z.boolean(),
+  // Hours since the last successful handshake before a "reachable" node drops
+  // to the slow re-crawl cadence. Optional for backwards compat with older
+  // project.config.yaml files; the crawler defaults to 24 when omitted.
+  staleReachableAfterHours: z
+    .number()
+    .int()
+    .min(1, 'staleReachableAfterHours must be >= 1')
+    .max(168, 'staleReachableAfterHours must be <= 168')
+    .optional(),
 });
 
 // ===========================================

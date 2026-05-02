@@ -37,6 +37,7 @@ const transformNode = (node: any): NodeWithProfile => ({
   connectionType: node.connection_type || 'ipv4',
   status: node.status || 'pending',
   lastSeen: node.last_seen,
+  lastHandshakeAt: node.last_handshake_at ?? null,
   firstSeen: node.first_seen || new Date().toISOString(),
   timesSeen: node.times_seen || 0,
   latencyMs: node.latency_ms,

@@ -53,6 +53,11 @@ export interface Node {
   // Status
   status: NodeStatus;
   lastSeen: string | null;
+  // ISO timestamp of the most recent successful version/verack handshake.
+  // null = never observed handshaking (e.g. wrong-chain peer that only
+  // reaches TCP). Distinguishing this from lastSeen lets API consumers
+  // build "active" filters without re-deriving from raw status.
+  lastHandshakeAt: string | null;
   firstSeen: string;
   timesSeen: number;
 

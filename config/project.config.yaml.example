@@ -351,6 +351,15 @@ crawlerConfig:
   # This keeps your database clean and focused on useful nodes
   requireVersionForSave: true
 
+  # Hours since the last successful version/verack handshake before a
+  # "reachable" node falls to the slow (down-cadence) re-crawl schedule.
+  # status itself is never auto-mutated — this only changes how often we
+  # poke nodes that consistently TCP-reach but never speak the protocol
+  # (wrong-chain peers, stale port reuse, etc.). A successful handshake on
+  # any subsequent slow check restores the fast cadence automatically.
+  # Range: 1..168 (1 hour to 7 days). Default: 24.
+  staleReachableAfterHours: 24
+
 # ===========================================
 # ADMIN & NOTIFICATIONS
 # ===========================================

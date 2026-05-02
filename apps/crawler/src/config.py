@@ -150,6 +150,9 @@ class CrawlerConfig:
     retry_backoff_multiplier: float
     fallback_protocol_versions: List[int]
     require_version_for_save: bool
+    # Hours since last successful version/verack handshake before a "reachable"
+    # node falls to the slow (down-cadence) re-crawl schedule. Bounds: 1..168.
+    stale_reachable_after_hours: int
 
     # Alerts (optional)
     alerts_enabled: bool
@@ -259,6 +262,14 @@ def load_config() -> CrawlerConfig:
     ))
     fallback_protocol_versions = crawler_yaml.get('fallbackProtocolVersions', [])
     require_version_for_save = crawler_yaml.get('requireVersionForSave', True)
+    stale_reachable_after_hours = int(os.getenv(
+        "STALE_REACHABLE_AFTER_HOURS",
+        str(crawler_yaml.get('staleReachableAfterHours', 24))
+    ))
+    if not 1 <= stale_reachable_after_hours <= 168:
+        raise ValueError(
+            f"staleReachableAfterHours must be between 1 and 168, got {stale_reachable_after_hours}"
+        )
 
     # Validate configuration
     if max_retries < 0:
@@ -317,6 +328,7 @@ def load_config() -> CrawlerConfig:
         initial_retry_delay=initial_retry_delay,
         retry_backoff_multiplier=retry_backoff_multiplier,
         fallback_protocol_versions=fallback_protocol_versions,
+        stale_reachable_after_hours=stale_reachable_after_hours,
         require_version_for_save=require_version_for_save,
 
         # Alerts

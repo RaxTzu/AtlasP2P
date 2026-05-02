@@ -33,6 +33,7 @@ from .protocol import (
 from .geoip import GeoIPLookup
 from .database import Database
 from .rpc import RPCClient
+from .recrawl import should_recrawl
 
 logger = structlog.get_logger()
 
@@ -51,8 +52,14 @@ class NodeInfo:
     status: str = "pending"
     first_seen: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_seen: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Set only on a successful version/verack handshake. Stale on a node that
+    # only reaches TCP — used by the crawler to back off cadence on long-stale
+    # "reachable" peers without lying about status.
+    last_handshake_at: Optional[datetime] = None
     times_seen: int = 1
     peers: List[NetAddr] = field(default_factory=list)
+
+
 
 
 class Crawler:
@@ -142,6 +149,23 @@ class Crawler:
     def _get_current_version(self) -> str:
         """Get the current version (dynamic or from config)."""
         return self._dynamic_current_version or self.chain_config.current_version
+
+    @staticmethod
+    def _parse_db_timestamp(value) -> Optional[datetime]:
+        """Coerce a Supabase ISO/datetime field to a UTC-aware datetime."""
+        if value is None or value == "":
+            return None
+        try:
+            if isinstance(value, str):
+                dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            else:
+                dt = value
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except Exception as e:
+            logger.debug("Failed to parse db timestamp", value=str(value), error=str(e))
+            return None
 
     def _node_key(self, ip: str, port: int) -> str:
         """Create a unique key for a node."""
@@ -517,6 +541,7 @@ class Crawler:
                 self.stats["connections_successful"] += 1
 
                 # Update or add node
+                now_ts = datetime.now(timezone.utc)
                 if key in self.nodes:
                     existing = self.nodes[key]
                     # Only update version info if we got a full handshake
@@ -526,11 +551,16 @@ class Crawler:
                         existing.services = node_info.services
                         existing.start_height = node_info.start_height
                         existing.peers = node_info.peers
+                        # Refresh handshake watermark only on full handshake;
+                        # leave alone on "reachable" so cadence reflects truth.
+                        existing.last_handshake_at = now_ts
                     existing.latency_ms = node_info.latency_ms
                     existing.status = node_info.status  # Preserve status from handshake result
-                    existing.last_seen = datetime.now(timezone.utc)
+                    existing.last_seen = now_ts
                     existing.times_seen += 1
                 else:
+                    if node_info.status == "up":
+                        node_info.last_handshake_at = now_ts
                     self.nodes[key] = node_info
                     self.stats["nodes_discovered"] += 1
 
@@ -726,39 +756,23 @@ class Crawler:
                 key = self._node_key(str(ip), port)
                 status = node.get("status", "unknown")
 
-                # Re-crawl logic based on node status
+                # Re-crawl decision delegates to the pure should_recrawl()
+                # helper. "Reachable" peers with a recent handshake stay on
+                # the fast path; ones that have been TCP-only for longer than
+                # stale_reachable_after_hours fall to the slow (down) cadence
+                # so we stop hammering dead-end peers every 5 minutes.
                 last_seen = node.get("last_seen")
-                should_crawl = False
+                last_handshake = node.get("last_handshake_at")
+                last_seen_dt = self._parse_db_timestamp(last_seen)
+                last_handshake_dt = self._parse_db_timestamp(last_handshake)
 
-                if last_seen:
-                    try:
-                        # Parse timestamp
-                        if isinstance(last_seen, str):
-                            last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
-                        else:
-                            last_seen_dt = last_seen
-
-                        # Ensure last_seen_dt is timezone-aware (assume UTC if naive)
-                        if last_seen_dt.tzinfo is None:
-                            last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
-                        minutes_since = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() / 60
-
-                        # Always re-check "up" and "reachable" nodes to detect outages quickly
-                        # These nodes should be checked every crawl pass
-                        if status in ("up", "reachable"):
-                            should_crawl = True
-                        # Re-check "down" nodes less frequently (every 30 minutes)
-                        elif status == "down" and minutes_since > 30:
-                            should_crawl = True
-                        # Re-check unknown/other status nodes every 10 minutes
-                        elif minutes_since > 10:
-                            should_crawl = True
-
-                    except Exception as e:
-                        logger.debug("Failed to parse last_seen", error=str(e))
-                        should_crawl = True
-                else:
-                    should_crawl = True
+                should_crawl = should_recrawl(
+                    status=status,
+                    last_seen=last_seen_dt,
+                    last_handshake_at=last_handshake_dt,
+                    now=datetime.now(timezone.utc),
+                    stale_reachable_after_hours=self.config.stale_reachable_after_hours,
+                )
 
                 if should_crawl:
                     self.pending.add(key)
@@ -777,7 +791,7 @@ class Crawler:
                         first_seen_dt = datetime.now(timezone.utc)
 
                     # Handle last_seen (may not be set if we took the else branch above)
-                    if not last_seen:
+                    if last_seen_dt is None:
                         last_seen_dt = datetime.now(timezone.utc)
 
                     # Ensure timezone-aware
@@ -798,6 +812,7 @@ class Crawler:
                         user_agent=node.get("version"),  # version field stores user_agent
                         peers=[],
                         last_seen=last_seen_dt,
+                        last_handshake_at=last_handshake_dt,
                         first_seen=first_seen_dt,
                         times_seen=node.get("times_seen", 0),
                     )
@@ -1206,6 +1221,9 @@ class Crawler:
                     "status": node.status,
                     "latency_ms": node.latency_ms,
                     "last_seen": node.last_seen.isoformat(),
+                    "last_handshake_at": (
+                        node.last_handshake_at.isoformat() if node.last_handshake_at else None
+                    ),
                     "first_seen": node.first_seen.isoformat(),
                     "times_seen": node.times_seen,
                 }
