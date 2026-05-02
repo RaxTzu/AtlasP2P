@@ -28,6 +28,11 @@ CREATE INDEX IF NOT EXISTS idx_nodes_reachable_handshake
 -- Surface the new column through the public view so API consumers can build
 -- their own "active = handshook within X" filter without re-deriving from
 -- the protected nodes table.
+--
+-- IMPORTANT: CREATE OR REPLACE VIEW only allows appending columns to the
+-- end of the column list (Postgres positional constraint). last_handshake_at
+-- is added as the last column to keep the migration in-place idempotent and
+-- to avoid breaking dependent grants / RLS policies that DROP VIEW would.
 CREATE OR REPLACE VIEW nodes_public AS
 SELECT
   n.id,
@@ -70,7 +75,6 @@ SELECT
   n.tips_enabled,
   n.first_seen,
   n.last_seen,
-  n.last_handshake_at,
   p.display_name,
   p.description,
   p.avatar_url,
@@ -80,7 +84,8 @@ SELECT
   p.telegram,
   p.github,
   p.tags,
-  COALESCE(p.is_public, true) as is_public
+  COALESCE(p.is_public, true) as is_public,
+  n.last_handshake_at
 FROM nodes n
 LEFT JOIN node_profiles p ON n.id = p.node_id AND p.is_public = true;
 
