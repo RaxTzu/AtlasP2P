@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Server, Download, Search, Filter } from 'lucide-react';
+import Link from 'next/link';
+import { Server, Download, Search, Filter, Plus } from 'lucide-react';
 import { NodesTable } from '@/components/tables/NodesTable';
 import { useNodes } from '@/hooks/useNodes';
-import { getChainConfig } from '@/config';
+import { getChainConfig, getThemeConfig } from '@/config';
 import type { NodeWithProfile } from '@atlasp2p/types';
 
 type StatusFilter = 'all' | 'online' | 'reachable' | 'offline';
@@ -13,6 +14,7 @@ type StatusFilter = 'all' | 'online' | 'reachable' | 'offline';
 export default function NodesPage() {
   const router = useRouter();
   const chainConfig = getChainConfig();
+  const theme = getThemeConfig();
   const { nodes, isLoading } = useNodes();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -69,14 +71,25 @@ export default function NodesPage() {
               Complete list of reachable {chainConfig.ticker} network nodes
             </p>
           </div>
-          <button
-            onClick={handleExportJSON}
-            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
-            title="Export as JSON"
-          >
-            <Download className="h-4 w-4" />
-            <span className="text-sm font-medium">Export JSON</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/manage/nodes"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+              style={{ backgroundColor: theme.primaryColor }}
+              title={`Register your ${chainConfig.ticker} node so it appears on the map`}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Register Node</span>
+            </Link>
+            <button
+              onClick={handleExportJSON}
+              className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+              title="Export as JSON"
+            >
+              <Download className="h-4 w-4" />
+              <span className="text-sm font-medium">Export JSON</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats Bar */}
