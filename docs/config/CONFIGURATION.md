@@ -794,7 +794,7 @@ verification:
 ```yaml
 turnstile:
   enabled: true  # Enable Cloudflare Turnstile CAPTCHA
-  siteKey: "1x00000000000000000000AA"  # Public site key (safe to commit)
+  siteKey: "1x00000000000000000000AA"  # dev test key; use your real 0x4AAA... key in production
   mode: invisible  # Widget appearance mode
   protectedActions:
     - verification  # Protect node verification endpoint
@@ -812,7 +812,7 @@ turnstile:
 - **`siteKey`** - Cloudflare Turnstile site key (public)
   - **Safe to commit** to version control
   - **Get yours**: [Cloudflare Turnstile Dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
-  - Example: `"1x00000000000000000000AA"`
+  - Example: `"1x00000000000000000000AA"` (Cloudflare test key; real keys start `0x4AAA...`)
 
 - **`mode`** - Widget appearance mode
   - **`invisible`** (recommended) - No visible widget, runs in background
@@ -932,7 +932,7 @@ MAXMIND_ACCOUNT_ID=your-account-id
 MAXMIND_LICENSE_KEY=your-license-key
 
 # Cloudflare Turnstile (Bot Protection) - REQUIRED if features.turnstile.enabled=true
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA  # NEVER commit this!
+TURNSTILE_SECRET_KEY=0x4AAA...your-production-secret-key  # real secret; NEVER commit this!
 
 # Optional: Crawler Configuration
 CRAWLER_INTERVAL_MINUTES=5
