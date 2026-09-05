@@ -74,21 +74,21 @@ mapConfig:
   tileStyles:
     - id: dogecoin
       name: Dogecoin (Themed)
-      url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]
 
     - id: voyager
       name: Voyager
-      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]
 
     - id: dark
       name: Dark Matter
-      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]

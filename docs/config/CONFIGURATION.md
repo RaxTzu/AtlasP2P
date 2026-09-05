@@ -604,17 +604,31 @@ Custom map tile layers for the style switcher
 
 **Popular tile providers**:
 
-**CARTO (Free, recommended)**:
+**CARTO (Free, API key required)**:
+
+As of 2026, CARTO's raster basemaps require a free API key — without one the tiles
+render with an "API KEY REQUIRED" watermark. Request one at
+https://carto.com/basemaps/apikey (instant, no account, 5M tile requests/month).
+Append it as `?key=...`, referenced as `${CARTO_MAP_API_KEY}` so the key comes from
+the environment (`.env` / SSM) instead of the committed config — it is a
+rate-limited, browser-visible value, not a secret, but should not be hard-coded
+into a shared repo.
+
 ```yaml
 # Light theme
-url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png
+url: https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
 
 # Dark theme
-url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
 
 # Voyager (colorful)
-url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png
+url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
 ```
+
+Then set `CARTO_MAP_API_KEY=...` in your environment. CARTO is retiring raster
+basemaps in favour of vector styles (`styleUrl:` — sharper, restyleable), which
+will require the same key in future. A no-key alternative is
+[OpenFreeMap](https://openfreemap.org) (`styleUrl: https://tiles.openfreemap.org/styles/dark`).
 
 **OpenStreetMap (Free)**:
 ```yaml
@@ -780,7 +794,7 @@ verification:
 ```yaml
 turnstile:
   enabled: true  # Enable Cloudflare Turnstile CAPTCHA
-  siteKey: "0x4AAAAAACHmrULrWXGjnBlP"  # Public site key (safe to commit)
+  siteKey: "1x00000000000000000000AA"  # Public site key (safe to commit)
   mode: invisible  # Widget appearance mode
   protectedActions:
     - verification  # Protect node verification endpoint
@@ -798,7 +812,7 @@ turnstile:
 - **`siteKey`** - Cloudflare Turnstile site key (public)
   - **Safe to commit** to version control
   - **Get yours**: [Cloudflare Turnstile Dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
-  - Example: `"0x4AAAAAACHmrULrWXGjnBlP"`
+  - Example: `"1x00000000000000000000AA"`
 
 - **`mode`** - Widget appearance mode
   - **`invisible`** (recommended) - No visible widget, runs in background
@@ -814,9 +828,9 @@ turnstile:
 
 Add to your `.env` file (NEVER commit):
 ```bash
-# Production keys (domain restricted)
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAACHmrULrWXGjnBlP
-TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+# Production keys (domain restricted) — get real values from the Cloudflare dashboard
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x_YOUR_TURNSTILE_SITE_KEY
+TURNSTILE_SECRET_KEY=0x_YOUR_TURNSTILE_SECRET_KEY
 
 # OR for local development (test keys that always pass)
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
@@ -918,7 +932,7 @@ MAXMIND_ACCOUNT_ID=your-account-id
 MAXMIND_LICENSE_KEY=your-license-key
 
 # Cloudflare Turnstile (Bot Protection) - REQUIRED if features.turnstile.enabled=true
-TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE  # NEVER commit this!
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA  # NEVER commit this!
 
 # Optional: Crawler Configuration
 CRAWLER_INTERVAL_MINUTES=5

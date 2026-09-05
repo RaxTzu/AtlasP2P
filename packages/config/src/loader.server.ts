@@ -12,13 +12,38 @@ import { ProjectConfigSchema } from './schema';
 import { ZodError } from 'zod';
 
 /**
+ * Substitute ${VAR} references in the raw config text from process.env.
+ * Lets public-but-account-scoped values (e.g. a CARTO basemap key) live in the
+ * environment / SSM instead of being hard-coded into the committed YAML. An
+ * unset var is substituted with an empty string and logged, so the failure is
+ * visible (a watermarked tile) rather than a literal "${VAR}" on the wire.
+ */
+function interpolateEnv(raw: string): string {
+  const missing = new Set<string>();
+  const out = raw.replace(/\$\{([A-Z0-9_]+)\}/g, (_match, name: string) => {
+    const value = process.env[name];
+    if (value === undefined || value === '') {
+      missing.add(name);
+      return '';
+    }
+    return value;
+  });
+  if (missing.size > 0) {
+    console.warn(
+      `[config] Unset env var(s) referenced in config, substituted empty: ${[...missing].join(', ')}`
+    );
+  }
+  return out;
+}
+
+/**
  * Load configuration from YAML file (SERVER-SIDE ONLY)
  * @param configPath - Path to the YAML config file
  */
 export function loadConfigFromFile(configPath: string): ProjectConfig {
   try {
-    // Read and parse YAML file
-    const fileContents = fs.readFileSync(configPath, 'utf8');
+    // Read, interpolate ${ENV_VARS}, then parse YAML file
+    const fileContents = interpolateEnv(fs.readFileSync(configPath, 'utf8'));
     const rawConfig = yaml.load(fileContents);
 
     // Validate with Zod

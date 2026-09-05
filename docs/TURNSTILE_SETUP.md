@@ -75,7 +75,7 @@ For production, you need **real keys** from Cloudflare Dashboard and must whitel
 ```yaml
 turnstile:
   enabled: true
-  siteKey: "0x4AAAAAACHmrULrWXGjnBlP"  # Your real production key
+  siteKey: "1x00000000000000000000AA"  # Cloudflare TEST site key (always passes) — replace with your real key from the dashboard
   mode: invisible
   protectedActions:
     - verification
@@ -87,13 +87,13 @@ turnstile:
 
 Store in GitHub Secrets or AWS SSM:
 ```bash
-TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 ```
 
 **Via Manual .env (Testing):**
 ```bash
 # Production keys
-TURNSTILE_SECRET_KEY=0x4AAAAAACHmrfqdjuWH8nhgwEVTDHAqZTE
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 ```
 
 ### 4. Whitelist Domain
