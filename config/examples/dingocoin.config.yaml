@@ -224,7 +224,7 @@ mapConfig:
       name: Branded
       description: Custom branded map style (edit filter for your brand colors!)
       icon: sun  # lucide-react icon name
-      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]
@@ -236,7 +236,7 @@ mapConfig:
       name: Voyager
       description: Detailed map with crisp roads and labels (light map)
       icon: map  # lucide-react icon name
-      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]
@@ -248,7 +248,7 @@ mapConfig:
       name: Dark Matter
       description: Sleek dark theme perfect for night viewing (dark map)
       icon: moon  # lucide-react icon name
-      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>"
       maxZoom: 20
       subdomains: [a, b, c, d]
@@ -423,7 +423,7 @@ features:
   turnstile:
     enabled: false
     # Site key (public key) - safe to commit
-    siteKey: "0x4AAAAAACHmrULrWXGjnBlP"
+    siteKey: "1x00000000000000000000AA"
     # Turnstile widget mode
     mode: invisible  # visible | invisible | managed
     # Actions that require Turnstile verification

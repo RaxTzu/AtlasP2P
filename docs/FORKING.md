@@ -431,7 +431,7 @@ mapConfig:
   tileStyles:
     - id: custom-dark
       name: Dark Theme
-      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+      url: https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_MAP_API_KEY}
       attribution: "&copy; CARTO &copy; OpenStreetMap"
       maxZoom: 20
       subdomains: [a, b, c, d]
@@ -440,7 +440,8 @@ mapConfig:
 ```
 
 Popular tile providers:
-- **CARTO** (free): `basemaps.cartocdn.com`
+- **CARTO** (free, API key required — https://carto.com/basemaps/apikey; set `CARTO_MAP_API_KEY`): `basemaps.cartocdn.com`
+- **OpenFreeMap** (free, no key; vector `styleUrl`): `tiles.openfreemap.org`
 - **OpenStreetMap** (free): `tile.openstreetmap.org`
 - **Mapbox** (requires API key): `api.mapbox.com`
 - **Stadia** (requires API key): `tiles.stadiamaps.com`
