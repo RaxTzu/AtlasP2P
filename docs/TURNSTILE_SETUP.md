@@ -75,26 +75,28 @@ For production, you need **real keys** from Cloudflare Dashboard and must whitel
 ```yaml
 turnstile:
   enabled: true
-  siteKey: "1x00000000000000000000AA"  # Cloudflare TEST site key (always passes) — replace with your real key from the dashboard
+  siteKey: "0x4AAA...your-production-site-key"  # from the dashboard, NOT a 1x/2x/3x test key
   mode: invisible
   protectedActions:
     - verification
 ```
 
+A production widget must not carry a test key — the challenge would always pass
+and bot protection would be effectively off. The site key is public (it ships in
+the browser), so committing it is fine; the secret key below is not.
+
 ### 3. Configure Secret Key
 
-**Via CI/CD (Recommended):**
+Use the real secret from the dashboard, never a test key, and never commit it.
 
-Store in GitHub Secrets or AWS SSM:
+**Via CI/CD (recommended)** — store it in AWS SSM or GitHub Secrets and let the
+deploy inject it into the server `.env`:
 ```bash
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+TURNSTILE_SECRET_KEY=0x4AAA...your-production-secret-key
 ```
 
-**Via Manual .env (Testing):**
-```bash
-# Production keys
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
-```
+**Via manual `.env` on the server** (small / self-hosted) — put the same real
+value in the deploy target's `.env` directly. Still never commit that file.
 
 ### 4. Whitelist Domain
 
@@ -274,7 +276,9 @@ turnstile:
 
 ```bash
 # NEVER commit this file!
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# Local dev: use the always-pass test secret 1x0000000000000000000000000000000AA
+# Production: the real secret from the Cloudflare Dashboard
+TURNSTILE_SECRET_KEY=0x4AAA...your-production-secret-key
 ```
 
 ### Frontend Hook
