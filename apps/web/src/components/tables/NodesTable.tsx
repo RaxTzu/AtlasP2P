@@ -248,8 +248,8 @@ export function NodesTable({ nodes, onNodeClick }: NodesTableProps) {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
+        <div className="text-sm text-muted-foreground text-center sm:text-left">
           Showing <span className="font-semibold text-foreground">{pagination.pageIndex * pagination.pageSize + 1}</span> to{' '}
           <span className="font-semibold text-foreground">
             {Math.min((pagination.pageIndex + 1) * pagination.pageSize, nodes.length)}
@@ -257,7 +257,7 @@ export function NodesTable({ nodes, onNodeClick }: NodesTableProps) {
           of <span className="font-semibold text-foreground">{nodes.length}</span> nodes
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
