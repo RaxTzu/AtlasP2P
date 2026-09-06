@@ -162,11 +162,11 @@ export function NodeDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 pt-16 sm:p-4 sm:pt-20"
       onClick={onClose}
     >
       <div
-        className="bg-card rounded-t-xl sm:rounded-xl shadow-2xl w-full sm:max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col border border-border"
+        className="bg-card rounded-none sm:rounded-xl shadow-2xl w-full sm:max-w-4xl h-[calc(100vh-4rem)] sm:h-auto sm:max-h-[calc(100vh-6rem)] overflow-hidden flex flex-col border-0 sm:border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
