@@ -15,7 +15,7 @@ export default function NodesPage() {
   const router = useRouter();
   const chainConfig = getChainConfig();
   const theme = getThemeConfig();
-  const { nodes, isLoading } = useNodes();
+  const { nodes, isLoading } = useNodes({ ignoreGlobalFilters: true });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 

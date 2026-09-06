@@ -189,7 +189,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 
 export default function DashboardPage() {
   const theme = getThemeConfig();
-  const { nodes, isLoading } = useNodes();
+  const { nodes, isLoading } = useNodes({ ignoreGlobalFilters: true });
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);

@@ -42,7 +42,7 @@ const ITEMS_PER_PAGE = 50;
 
 export default function LeaderboardPage() {
   const theme = getThemeConfig();
-  const { nodes, isLoading } = useNodes();
+  const { nodes, isLoading } = useNodes({ ignoreGlobalFilters: true });
   const [sortBy, setSortBy] = useState<'pix' | 'uptime' | 'latency'>('pix');
   const [currentPage, setCurrentPage] = useState(1);
 
