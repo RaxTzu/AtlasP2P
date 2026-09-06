@@ -239,6 +239,7 @@ export default function UsersManagementPage() {
         </div>
       ) : (
         <div className="glass-strong rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
@@ -379,6 +380,7 @@ export default function UsersManagementPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

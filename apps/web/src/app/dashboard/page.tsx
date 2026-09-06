@@ -189,7 +189,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 
 export default function DashboardPage() {
   const theme = getThemeConfig();
-  const { nodes, isLoading } = useNodes();
+  const { nodes, isLoading } = useNodes({ ignoreGlobalFilters: true });
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -525,7 +525,7 @@ export default function DashboardPage() {
 
               {/* CHARTS SECTION */}
               <div className="mb-8">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                   <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
                     <div className="h-1 w-8 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
                     Network Analytics
@@ -533,7 +533,7 @@ export default function DashboardPage() {
                   </h2>
 
                   {/* Chart tabs */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setActiveTab('trends')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${

@@ -61,7 +61,8 @@ const transformNode = (node: any): NodeWithProfile => ({
   telegram: node.telegram || null,
 });
 
-export function useNodes() {
+export function useNodes(options?: { ignoreGlobalFilters?: boolean }) {
+  const ignoreGlobalFilters = options?.ignoreGlobalFilters ?? false;
   const chain = getProjectConfig().chain;
   const [nodes, setNodes] = useState<NodeWithProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,24 +96,24 @@ export function useNodes() {
         .eq('chain', chain);
 
       // Apply filters
-      if (filters.status) {
+      if (!ignoreGlobalFilters && filters.status) {
         query = query.eq('status', filters.status);
       }
 
-      if (filters.tier) {
+      if (!ignoreGlobalFilters && filters.tier) {
         query = query.eq('tier', filters.tier);
       }
 
-      if (filters.country) {
+      if (!ignoreGlobalFilters && filters.country) {
         query = query.eq('country_code', filters.country);
       }
 
-      if (filters.isVerified) {
+      if (!ignoreGlobalFilters && filters.isVerified) {
         query = query.eq('is_verified', true);
       }
 
       // Use debounced search instead of immediate search
-      if (debouncedSearch && debouncedSearch.trim()) {
+      if (!ignoreGlobalFilters && debouncedSearch && debouncedSearch.trim()) {
         const searchTerm = debouncedSearch.trim().replace(/[%_]/g, '\\$&');
         query = query.or(
           `ip.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,country_name.ilike.%${searchTerm}%,country_code.ilike.%${searchTerm}%,version.ilike.%${searchTerm}%`
@@ -166,7 +167,7 @@ export function useNodes() {
     } finally {
       setIsLoading(false);
     }
-  }, [chain, filters.status, filters.tier, filters.country, filters.isVerified, filters.sortBy, filters.sortOrder, filters.limit, filters.offset, debouncedSearch]);
+  }, [chain, ignoreGlobalFilters, filters.status, filters.tier, filters.country, filters.isVerified, filters.sortBy, filters.sortOrder, filters.limit, filters.offset, debouncedSearch]);
 
   useEffect(() => {
     fetchNodes();
